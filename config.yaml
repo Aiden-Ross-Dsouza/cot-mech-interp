@@ -1,0 +1,114 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# config.yaml  — Central configuration for the AGD research pipeline
+# All scripts read this file via src/config.py.
+# Overridable at the CLI level via --config path/to/override.yaml in scripts.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Reproducibility
+seed: 42
+
+# ── Paths ─────────────────────────────────────────────────────────────────────
+paths:
+  data:          data/
+  prompts:       data/prompts/
+  pairs:         data/pairs/
+  graphs:        artifacts/graphs/
+  activations:   artifacts/activations/
+  agd:           artifacts/agd/
+  behavioral:    artifacts/behavioral/
+  analysis:      analysis/
+  figures:       analysis/figures/
+  paper:         paper/
+
+# ── Models ────────────────────────────────────────────────────────────────────
+models:
+  main:
+    name:      google/gemma-2-2b-it
+    dtype:     float16          # fp16: fits in ~5 GB on Quadro RTX 6000
+    device:    cuda
+  paraphrase:
+    name:      google/gemma-2-9b-it
+    load_in_4bit: true          # bitsandbytes 4-bit for the paraphrase generator
+    device:    cuda
+  robustness:
+    name:      meta-llama/Llama-3.2-1B-Instruct
+    dtype:     float16
+    device:    cuda
+
+# ── Gemma Scope transcoders (PLT) ─────────────────────────────────────────────
+transcoders:
+  hf_repo:   google/gemma-scope-2b-pt-transcoders
+  type:      plt                # per-layer transcoder (PLT); alt: clt
+  layers:    [0, 4, 8, 12, 16, 20, 24]   # subset; circuit-tracer uses all by default
+
+# ── AGD metric ────────────────────────────────────────────────────────────────
+agd:
+  k:             64             # top-k nodes by influence-on-target (default)
+  alpha:         0.5            # weight between J_w (nodes) and S_e (edges)
+  top_edges:     256            # edge set for S_e cosine
+  pruning_threshold: 0.8        # fraction of total attribution retained after pruning
+
+# ── Dataset sizes ─────────────────────────────────────────────────────────────
+dataset:
+  bbh_subtasks:
+    - hyperbaton
+    - logical_deduction_three_objects
+    - navigate
+    - sports_understanding
+    - snarks
+    - web_of_lies
+    - causal_judgement
+    - formal_fallacies
+    - ruin_names
+    - date_understanding
+  bbh_items_per_subtask: 30     # → 300 BBH items total
+  mmlu_categories:
+    - high_school_mathematics
+    - high_school_physics
+    - logical_fallacies
+    - moral_scenarios
+    - professional_law
+  mmlu_items_per_cat: 30        # → 150 MMLU items total
+  gsm8k_items: 100
+  turpin_hint_items: 200        # BBH items augmented with Turpin-style hints
+  train_fraction: 0.60          # 60/40 stratified split
+
+# ── Pilot run ─────────────────────────────────────────────────────────────────
+pilot:
+  n_items: 10                   # 10 BBH items × 3 regimes = 30 graph-pairs
+
+# ── Behavioral baselines (Lanham AOC) ─────────────────────────────────────────
+behavioral:
+  truncation_fractions: [0.25, 0.50, 0.75]
+  n_self_consistency: 8         # samples for self-consistency variance
+
+# ── Paraphrase generation ─────────────────────────────────────────────────────
+paraphrase:
+  temperature:   0.9
+  min_edit_distance: 20        # minimum char-level edit distance to accept c'
+
+# ── Attribution graph generation ─────────────────────────────────────────────
+graph_gen:
+  checkpoint_every: 50          # save checkpoint every N graphs
+  max_new_tokens: 512           # CoT generation budget
+
+# ── Statistical analysis ──────────────────────────────────────────────────────
+stats:
+  n_bootstrap:   5000
+  bootstrap_method: bca         # BCa (bias-corrected accelerated)
+  alpha_family:  0.05           # family-wise alpha for Holm-Bonferroni
+  h1_rho_threshold:   0.30
+  h2_auroc_threshold: 0.65
+  h3_delta_auroc:     0.05
+
+# ── Ablation grids ────────────────────────────────────────────────────────────
+ablations:
+  alpha_grid:     [0.0, 0.25, 0.5, 0.75, 1.0]
+  k_grid:         [16, 32, 64, 128, 256]
+  pruning_grid:   [0.5, 0.7, 0.8, 0.95]
+  layer_bands:
+    early:  [0, 8]
+    middle: [9, 16]
+    late:   [17, 25]
+  clt_subset_n:   100           # prompt subset for PLT vs CLT ablation
+  robustness_n:   100           # prompt subset for Llama-3.2-1B robustness check
