@@ -9,9 +9,9 @@ bitsandbytes>=0.43.0
 datasets>=2.19.0
 huggingface_hub>=0.23.0
 
-# ── circuit-tracer (Anthropic, open-source) ───────────────────────────────────
-# Install from source: pip install git+https://github.com/anthropics/circuit-tracer.git
-circuit-tracer>=0.1.0
+# ── circuit-tracer (Decoderesearch, open-source) ───────────────────────────────────
+# Install from source: pip install git+https://github.com/decoderesearch/circuit-tracer.git
+circuit-tracer
 
 # ── TransformerLens (for activation-cosine baseline) ─────────────────────────
 transformer-lens>=1.17.0

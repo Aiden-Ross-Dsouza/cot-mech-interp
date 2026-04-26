@@ -49,8 +49,8 @@ def run_replication(cfg, save: bool = False) -> bool:
         logger.info("[1/4] ✓ circuit-tracer importable")
     except ImportError:
         logger.error(
-            "[1/4] ✗ circuit-tracer NOT found.\n"
-            "Install: pip install git+https://github.com/anthropics/circuit-tracer.git"
+            "[1/4] \u2717 circuit-tracer NOT found.\n"
+            "Install: pip install git+https://github.com/decoderesearch/circuit-tracer.git"
         )
         return False
 

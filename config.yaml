@@ -37,7 +37,7 @@ models:
 
 # ── Gemma Scope transcoders (PLT) ─────────────────────────────────────────────
 transcoders:
-  hf_repo:   google/gemma-scope-2b-pt-transcoders
+  hf_repo:   mwhanna/gemma-scope-transcoders
   type:      plt                # per-layer transcoder (PLT); alt: clt
   layers:    [0, 4, 8, 12, 16, 20, 24]   # subset; circuit-tracer uses all by default
 

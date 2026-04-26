@@ -2,8 +2,8 @@
 artifacts/graphs/
 artifacts/activations/
 
-# ── Raw downloaded data ───────────────────────────────────────────────────────
-data/raw/
+# ── Raw and generated data ────────────────────────────────────────────────────
+data/
 
 # ── HuggingFace model cache ───────────────────────────────────────────────────
 .cache/

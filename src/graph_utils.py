@@ -43,6 +43,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
+import torch
 
 from src.config import Config
 
@@ -85,12 +86,14 @@ def generate_attribution_graph(
         Dict matching the JSON schema described in the module docstring.
     """
     try:
-        from circuit_tracer import AttributionGraph
-        from circuit_tracer.utils import load_transcoder
+        from circuit_tracer.attribution.attribute import attribute
+        from circuit_tracer.graph import prune_graph
+        from circuit_tracer.replacement_model.replacement_model_transformerlens import TransformerLensReplacementModel
+        from circuit_tracer.utils.hf_utils import load_transcoder_from_hub
     except ImportError:
         raise ImportError(
-            "circuit-tracer not installed. "
-            "Run: pip install git+https://github.com/anthropics/circuit-tracer.git"
+            "circuit-tracer (decoderesearch version) not installed correctly. "
+            "Run: pip install git+https://github.com/decoderesearch/circuit-tracer.git"
         )
 
     # Tokenize target to get its ID
@@ -104,40 +107,139 @@ def generate_attribution_graph(
 
     logger.debug(f"[{item_id}/{condition}] Building attribution graph for '{target_token}'…")
 
-    # Load transcoders (circuit-tracer caches internally)
-    transcoder = load_transcoder(
+    # 1. Load transcoders (PLT/CLT)
+    # The new API uses load_transcoder_from_hub which returns (transcoder_set, metadata)
+    transcoder_set, _ = load_transcoder_from_hub(
         cfg.transcoders.hf_repo,
-        transcoder_type=cfg.transcoders.type,
+        device=torch.device(cfg.models.main.device),
+        dtype=torch.float16, # Gemma Scope usually in fp16/bf16
+    )
+
+    # 2. Wrap model in TransformerLensReplacementModel
+    # Note: load_main_model returns (AutoModelForCausalLM, AutoTokenizer)
+    # Circuit-tracer attribute() prefers HookedTransformer for TL backend.
+    # We use from_pretrained_and_transcoders if we want to load via TL,
+    # but since we already have the model loaded, we'll try to wrap or reload.
+    # In practice, circuit-tracer works best if it manages the model loading.
+    # For now, we'll initialize the replacement model using the name.
+    tl_model = TransformerLensReplacementModel.from_pretrained_and_transcoders(
+        cfg.models.main.name,
+        transcoder_set,
         device=cfg.models.main.device,
+        dtype=torch.float16,
     )
 
-    # Build and prune the attribution graph
-    ag = AttributionGraph(
-        model=model,
-        tokenizer=tokenizer,
-        transcoder=transcoder,
+    # 3. Compute dense attribution graph
+    # attribution_targets=None auto-selects top logits
+    ag = attribute(
         prompt=prompt,
-        target_token_id=target_token_id,
-        pruning_threshold=cfg.agd.pruning_threshold,
+        model=tl_model,
+        attribution_targets=[target_token],
+        max_feature_nodes=cfg.agd.k * 2, # Buffer for pruning
+        verbose=False,
     )
-    ag.build()
 
-    # Serialize to our schema
+    # 4. Prune graph
+    prune_result = prune_graph(
+        ag,
+        node_threshold=cfg.agd.pruning_threshold,
+        edge_threshold=0.98,
+    )
+
+    # 5. Extract nodes and edges from pruned result
+    n_features = len(ag.selected_features)
+    n_pos = ag.n_pos
+    n_layers = ag.cfg.n_layers
+    n_logits = len(ag.logit_targets)
+
+    # Indices in adjacency matrix: [features, errors, tokens, logits]
+    error_start = n_features
+    token_start = error_start + n_layers * n_pos
+    logit_start = token_start + n_pos
+
+    node_mask = prune_result.node_mask
+    edge_mask = prune_result.edge_mask
+
     nodes = []
-    for node in ag.nodes:
-        nodes.append({
-            "feature_id": str(node.feature_id),
-            "layer": int(node.layer) if hasattr(node, "layer") else -1,
-            "influence": float(node.influence_on_target),
-            "label": str(node.label) if hasattr(node, "label") else "",
-        })
+    # Map feature nodes
+    for i in range(n_features):
+        if node_mask[i]:
+            active_idx = ag.selected_features[i].item()
+            layer, pos, feat_idx = ag.active_features[active_idx].tolist()
+            nodes.append({
+                "feature_id": f"L{layer}_P{pos}_F{feat_idx}",
+                "layer": int(layer),
+                "influence": float(ag.activation_values[i]), # Using activation as fallback for weight
+                "label": f"Feature {feat_idx} at L{layer} P{pos}",
+            })
 
+    # Map error nodes
+    for i in range(error_start, token_start):
+        if node_mask[i]:
+            layer = (i - error_start) // n_pos
+            pos = (i - error_start) % n_pos
+            nodes.append({
+                "feature_id": f"L{layer}_P{pos}_ERR",
+                "layer": int(layer),
+                "influence": 0.0,
+                "label": f"Error at L{layer} P{pos}",
+            })
+
+    # Map token nodes
+    for i in range(token_start, logit_start):
+        if node_mask[i]:
+            pos = i - token_start
+            token_id = ag.input_tokens[pos].item()
+            token_str = tl_model.tokenizer.decode(token_id)
+            nodes.append({
+                "feature_id": f"P{pos}_TOK_{token_id}",
+                "layer": -1,
+                "influence": 0.0,
+                "label": f"Token: {token_str}",
+            })
+
+    # Map logit nodes
+    for i in range(logit_start, logit_start + n_logits):
+        if node_mask[i]:
+            target = ag.logit_targets[i - logit_start]
+            nodes.append({
+                "feature_id": f"LOGIT_{target.vocab_idx}",
+                "layer": n_layers,
+                "influence": float(ag.logit_probabilities[i - logit_start]),
+                "label": f"Target: {target.token_str}",
+            })
+
+    # Map edges
     edges = []
-    for edge in ag.edges:
+    rows, cols = edge_mask.nonzero(as_tuple=True)
+    for r, c in zip(rows.tolist(), cols.tolist()):
+        # Adjacency matrix: rows are targets, cols are sources
+        # We need to map row/col index to feature_id
+        def get_id(idx):
+            if idx < n_features:
+                active_idx = ag.selected_features[idx].item()
+                layer, pos, f_idx = ag.active_features[active_idx].tolist()
+                return f"L{layer}_P{pos}_F{f_idx}"
+            elif idx < token_start:
+                l = (idx - error_start) // n_pos
+                p = (idx - error_start) % n_pos
+                return f"L{l}_P{p}_ERR"
+            elif idx < logit_start:
+                p = idx - token_start
+                tid = ag.input_tokens[p].item()
+                return f"P{p}_TOK_{tid}"
+            else:
+                target_idx = idx - logit_start
+                if target_idx >= 0 and target_idx < len(ag.logit_targets):
+                    tid = ag.logit_targets[target_idx].vocab_idx
+                else:
+                    tid = "UNK"
+                return f"LOGIT_{tid}"
+
         edges.append({
-            "src": str(edge.src_feature_id),
-            "dst": str(edge.dst_feature_id),
-            "weight": float(edge.attribution),
+            "src": get_id(c),
+            "dst": get_id(r),
+            "weight": float(ag.adjacency_matrix[r, c]),
         })
 
     graph_dict = {
