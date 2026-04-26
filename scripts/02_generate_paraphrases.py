@@ -132,9 +132,14 @@ def main():
                 logger.warning(f"[{iid}] Answer verification failed: {e}")
                 answer_prime = ""
 
+            # Robust answer comparison (strip parentheses)
+            def clean(s):
+                if not s: return ""
+                return str(s).replace("(", "").replace(")", "").strip().upper()
+
             kept = (
                 ed >= min_edit
-                and answer_prime.strip().upper() == str(gold).strip().upper()
+                and clean(answer_prime) == clean(gold)
             )
 
             writer.write({

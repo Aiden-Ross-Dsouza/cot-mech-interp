@@ -125,7 +125,12 @@ def main():
                     seed=cfg.seed,
                 )
                 pred = extract_answer(cot_full, task_type)
-                correct = pred.strip().upper() == str(gold).strip().upper()
+                # Robust answer comparison (strip parentheses)
+                def clean(s):
+                    if not s: return ""
+                    return str(s).replace("(", "").replace(")", "").strip().upper()
+
+                correct = clean(pred) == clean(gold)
 
                 writer.write({
                     "item_id": iid,

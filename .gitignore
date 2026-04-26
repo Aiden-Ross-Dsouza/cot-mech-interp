@@ -3,7 +3,10 @@ artifacts/graphs/
 artifacts/activations/
 
 # ── Raw and generated data ────────────────────────────────────────────────────
-data/
+data/prompts/
+data/pairs/
+data/raw/
+!data/*.txt
 
 # ── HuggingFace model cache ───────────────────────────────────────────────────
 .cache/
