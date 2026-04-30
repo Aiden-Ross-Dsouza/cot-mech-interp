@@ -62,6 +62,7 @@ def generate_attribution_graph(
     cfg: Config,
     item_id: str = "unknown",
     condition: str = "clean",
+    tl_model: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Generate a pruned attribution graph for (prompt, target_token).
 
@@ -96,47 +97,43 @@ def generate_attribution_graph(
             "Run: pip install git+https://github.com/decoderesearch/circuit-tracer.git"
         )
 
-    # Tokenize target to get its ID
     target_ids = tokenizer.encode(target_token, add_special_tokens=False)
     if len(target_ids) != 1:
-        logger.warning(
-            f"Target token '{target_token}' encodes to {len(target_ids)} tokens; "
-            f"using first: {target_ids[0]}"
+        raise ValueError(
+            f"CRITICAL: Target token '{target_token}' encodes to {len(target_ids)} tokens "
+            f"({target_ids}). Attribution will be mathematically invalid. "
+            f"Ensure target maps exactly to 1 vocabulary item."
         )
     target_token_id = target_ids[0]
 
-    logger.debug(f"[{item_id}/{condition}] Building attribution graph for '{target_token}'…")
+    logger.info(f"  [{item_id}/{condition}] Starting attribution for '{target_token}' (Prompt: {len(prompt)} chars)...")
 
-    # 1. Load transcoders (PLT/CLT)
-    # The new API uses load_transcoder_from_hub which returns (transcoder_set, metadata)
-    transcoder_set, _ = load_transcoder_from_hub(
-        cfg.transcoders.hf_repo,
-        device=torch.device(cfg.models.main.device),
-        dtype=torch.float16, # Gemma Scope usually in fp16/bf16
-    )
-
-    # 2. Wrap model in TransformerLensReplacementModel
-    # Note: load_main_model returns (AutoModelForCausalLM, AutoTokenizer)
-    # Circuit-tracer attribute() prefers HookedTransformer for TL backend.
-    # We use from_pretrained_and_transcoders if we want to load via TL,
-    # but since we already have the model loaded, we'll try to wrap or reload.
-    # In practice, circuit-tracer works best if it manages the model loading.
-    # For now, we'll initialize the replacement model using the name.
-    tl_model = TransformerLensReplacementModel.from_pretrained_and_transcoders(
-        cfg.models.main.name,
-        transcoder_set,
-        device=cfg.models.main.device,
-        dtype=torch.float16,
-    )
+    # 1. Load model and transcoders (only if not provided)
+    if tl_model is None:
+        logger.info(f"[{item_id}/{condition}] No model provided; loading {cfg.models.main.name}…")
+        transcoder_set, _ = load_transcoder_from_hub(
+            cfg.transcoders.hf_repo,
+            device=torch.device(cfg.models.main.device),
+            dtype=torch.float16,
+        )
+        tl_model = TransformerLensReplacementModel.from_pretrained_and_transcoders(
+            cfg.models.main.name,
+            transcoder_set,
+            device=cfg.models.main.device,
+            dtype=torch.float16,
+        )
 
     # 3. Compute dense attribution graph
     # attribution_targets=None auto-selects top logits
+    torch.cuda.empty_cache()
     ag = attribute(
         prompt=prompt,
         model=tl_model,
         attribution_targets=[target_token],
-        max_feature_nodes=cfg.agd.k * 2, # Buffer for pruning
-        verbose=False,
+        max_feature_nodes=cfg.agd.k * 2,  # Buffer for pruning (k=64 → 128 nodes)
+        batch_size=64,                     # Reduced from 512 → less peak VRAM per forward pass
+        offload="cpu",                     # Offload MLP activations to RAM → prevents 50 GiB OOM
+        verbose=True,
     )
 
     # 4. Prune graph

@@ -105,8 +105,9 @@ def main():
         logger.info(f"Resuming: {len(done_ids)} items already done.")
 
     n_written = 0
+    all_items = list(iter_prompts(cfg, pilot=args.pilot))
     with jsonlines.open(out_path, mode="a") as writer:
-        for item in tqdm(iter_prompts(cfg, pilot=args.pilot), desc="Generating CoTs"):
+        for item in tqdm(all_items, desc="Generating CoTs"):
             iid = item["item_id"]
             if iid in done_ids:
                 continue

@@ -1,12 +1,18 @@
 # ── Large research artifacts (regenerated from scripts) ──────────────────────
-artifacts/graphs/
-artifacts/activations/
+artifacts/
 
 # ── Raw and generated data ────────────────────────────────────────────────────
 data/prompts/
 data/pairs/
 data/raw/
 !data/*.txt
+*.jsonl
+*.parquet
+*.csv
+
+# ── Scratch and temporary files ──────────────────────────────────────────────
+scratch/
+scratch*
 
 # ── HuggingFace model cache ───────────────────────────────────────────────────
 .cache/

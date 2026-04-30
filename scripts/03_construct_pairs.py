@@ -56,7 +56,8 @@ def construct_regime_a_pairs(cfg, pilot: bool) -> int:
 
     n = 0
     with jsonlines.open(src) as reader, jsonlines.open(dst, mode="w") as writer:
-        for row in reader:
+        items = list(reader)
+        for row in tqdm(items, desc="Regime A Pairs"):
             if not row.get("kept", False):
                 continue
             question = row["question"]
@@ -105,7 +106,8 @@ def construct_regime_b_pairs(cfg, pilot: bool) -> int:
          jsonlines.open(dst_trunc, mode="w") as w_trunc, \
          jsonlines.open(dst_mistake, mode="w") as w_mistake:
 
-        for row in reader:
+        items = list(reader)
+        for row in tqdm(items, desc="Regime B Pairs"):
             if not row.get("correct", True):
                 # Only use items where the model got the right answer on the full CoT
                 continue
@@ -191,7 +193,7 @@ def construct_regime_c_pairs(cfg, pilot: bool) -> int:
             with jsonlines.open(p) as reader:
                 items = list(reader)
 
-            for item in items:
+            for item in tqdm(items, desc=f"Regime C Hint ({subtask})"):
                 choices = item.get("choices", [])
                 correct = item.get("answer", "")
                 if not choices or not correct:
