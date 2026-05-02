@@ -115,13 +115,15 @@ def main():
     if aoc_path.exists():
         aoc_df = pd.read_parquet(aoc_path)
         b_agd = agd_df[agd_df.get("regime_label", agd_df.get("fname", "")).str.contains("B", na=False)].copy()
-        merged = b_agd.merge(aoc_df, on="item_id", how="inner")
+        # A2 fix: Regime B items have synthetic IDs (e.g. 'q145_trunc25').
+        # Merge on base_item_id → original aoc item_id, otherwise inner join = 0 rows.
+        merged = b_agd.merge(aoc_df, left_on="base_item_id", right_on="item_id", how="inner")
         logger.info(f"H1 pairs (Regime B): {len(merged)}")
 
         if len(merged) >= 30:
             h1_result = spearman_with_ci(
                 merged["agd"].values,
-                merged["aoc_composite"].values,
+                1 - merged["aoc_composite"].values,  # A3 fix: pre-reg says ρ(AGD, 1-AOC) ≥ 0.30
                 n_boot=n_boot, seed=cfg.seed,
             )
             results["H1_spearman"] = h1_result
@@ -254,7 +256,9 @@ def main():
             logger.info(f"  {name}: raw p={raw_p:.4f}, corr p={corr_p:.4f}, reject={rej}")
 
     # ── Verdict ───────────────────────────────────────────────────────────────
-    h1_ok = h1_result and abs(h1_result["rho"]) >= cfg.stats.h1_rho_threshold
+    # A3 fix: pre-registration is directional (ρ ≥ 0.30 for 1-AOC direction).
+    # Remove abs() — using abs() would be a pre-registration integrity violation.
+    h1_ok = h1_result and h1_result["rho"] >= cfg.stats.h1_rho_threshold
     h2_ok = h2_result and h2_result["auc"] >= cfg.stats.h2_auroc_threshold
     h3_ok = h3_result and h3_result["delta_auc"] >= cfg.stats.h3_delta_auroc
 

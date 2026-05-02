@@ -39,7 +39,8 @@ models:
 transcoders:
   hf_repo:   mwhanna/gemma-scope-transcoders
   type:      plt                # per-layer transcoder (PLT); alt: clt
-  layers:    [0, 4, 8, 12, 16, 20, 24]   # subset; circuit-tracer uses all by default
+  # C3 fix: load all 26 layers. Full set ~4GB VRAM; fits alongside 5GB model on 24GB card.
+  layers:    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
 
 # ── AGD metric ────────────────────────────────────────────────────────────────
 agd:

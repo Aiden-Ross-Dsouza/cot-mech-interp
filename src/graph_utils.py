@@ -130,9 +130,8 @@ def generate_attribution_graph(
         prompt=prompt,
         model=tl_model,
         attribution_targets=[target_token],
-        max_feature_nodes=cfg.agd.k * 2,  # Buffer for pruning (k=64 → 128 nodes)
-        batch_size=64,                     # Reduced from 512 → less peak VRAM per forward pass
-        offload="cpu",                     # Offload MLP activations to RAM → prevents 50 GiB OOM
+        max_feature_nodes=512,  # Raised from k*2=128; allows meaningful k-sweep ablations up to 256
+        batch_size=64,          # Kept moderate to avoid peak VRAM spikes
         verbose=True,
     )
 
@@ -157,16 +156,39 @@ def generate_attribution_graph(
     node_mask = prune_result.node_mask
     edge_mask = prune_result.edge_mask
 
+    # Build a lookup from feature index → path-attribution score (Fix A4)
+    # The prune_result object doesn't expose raw influences, so we re-compute them
+    # here using the same logic as the library's pruning step.
+    # This ensures we use the causal influence-on-target (path attribution)
+    # rather than just the raw activation magnitude.
+    from circuit_tracer.graph import compute_node_influence
+
+    # Prepare logit weights (last n_logits rows in the adjacency matrix)
+    logit_weights = torch.zeros(ag.adjacency_matrix.shape[0], device=ag.adjacency_matrix.device)
+    logit_weights[-n_logits:] = ag.logit_probabilities
+
+    # Compute influence-on-target for all nodes
+    try:
+        node_influence = compute_node_influence(ag.adjacency_matrix, logit_weights)
+    except Exception as e:
+        logger.warning(f"Failed to compute node influence: {e}. Falling back to activations.")
+        node_influence = None
+
     nodes = []
     # Map feature nodes
     for i in range(n_features):
         if node_mask[i]:
             active_idx = ag.selected_features[i].item()
             layer, pos, feat_idx = ag.active_features[active_idx].tolist()
+            # A4 fix: use path-attribution score (causal), not activation magnitude (correlational)
+            if node_influence is not None:
+                influence_val = float(node_influence[i])
+            else:
+                influence_val = float(ag.activation_values[i])
             nodes.append({
                 "feature_id": f"L{layer}_P{pos}_F{feat_idx}",
                 "layer": int(layer),
-                "influence": float(ag.activation_values[i]), # Using activation as fallback for weight
+                "influence": influence_val,
                 "label": f"Feature {feat_idx} at L{layer} P{pos}",
             })
 
@@ -199,10 +221,12 @@ def generate_attribution_graph(
     for i in range(logit_start, logit_start + n_logits):
         if node_mask[i]:
             target = ag.logit_targets[i - logit_start]
+            # Use influence from the computed vector
+            inf_val = float(node_influence[i]) if node_influence is not None else float(ag.logit_probabilities[i - logit_start])
             nodes.append({
                 "feature_id": f"LOGIT_{target.vocab_idx}",
                 "layer": n_layers,
-                "influence": float(ag.logit_probabilities[i - logit_start]),
+                "influence": inf_val,
                 "label": f"Target: {target.token_str}",
             })
 

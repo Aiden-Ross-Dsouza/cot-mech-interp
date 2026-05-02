@@ -121,11 +121,13 @@ def evaluate_on_split(pairs_df: pd.DataFrame, split_ids: set, cfg, alpha: float,
     if aoc_path.exists():
         aoc_df = pd.read_parquet(aoc_path)
         b_agd = agd_df[agd_df["regime"].isin(["B", "B_trunc", "B_mistake"])].copy()
-        merged = b_agd.merge(aoc_df, on="item_id", how="inner")
+        # A2 fix: Regime B items have synthetic IDs like 'q145_trunc25'.
+        # Must merge on base_item_id → aoc_df.item_id.
+        merged = b_agd.merge(aoc_df, left_on="base_item_id", right_on="item_id", how="inner")
         if len(merged) >= 30:
             res = spearman_with_ci(
                 merged["agd"].values,
-                merged["aoc_composite"].values,
+                1 - merged["aoc_composite"].values,  # A3 fix: plan pre-registers ρ(AGD, 1-AOC) ≥ 0.30
                 n_boot=500,  # smaller for speed during grid search
             )
             h1_rho = res["rho"]
