@@ -121,13 +121,18 @@ def evaluate_on_split(pairs_df: pd.DataFrame, split_ids: set, cfg, alpha: float,
     if aoc_path.exists():
         aoc_df = pd.read_parquet(aoc_path)
         b_agd = agd_df[agd_df["regime"].isin(["B", "B_trunc", "B_mistake"])].copy()
-        # A2 fix: Regime B items have synthetic IDs like 'q145_trunc25'.
-        # Must merge on base_item_id → aoc_df.item_id.
-        merged = b_agd.merge(aoc_df, left_on="base_item_id", right_on="item_id", how="inner")
+        # R3 fix: Regime B has 4 pair variants per base item (3 truncations + 1 mistake).
+        # Each shares the same AOC value, so averaging AGD per base_item_id first
+        # gives one independent observation per item (correct unit for the correlation).
+        b_agd_per_item = (
+            b_agd.groupby("base_item_id")["agd"].mean().reset_index()
+        )
+        # A2 fix: merge on base_item_id → aoc item_id
+        merged = b_agd_per_item.merge(aoc_df, left_on="base_item_id", right_on="item_id", how="inner")
         if len(merged) >= 30:
             res = spearman_with_ci(
                 merged["agd"].values,
-                1 - merged["aoc_composite"].values,  # A3 fix: plan pre-registers ρ(AGD, 1-AOC) ≥ 0.30
+                1 - merged["aoc_composite"].values,  # A3 fix: ρ(AGD, 1-AOC) ≥ 0.30
                 n_boot=500,  # smaller for speed during grid search
             )
             h1_rho = res["rho"]

@@ -130,8 +130,30 @@ def bootstrap_bca_2sample(
         for _ in range(n_boot)
     ])
 
-    ci_lo = float(np.percentile(boot_stats, 100 * alpha / 2))
-    ci_hi = float(np.percentile(boot_stats, 100 * (1 - alpha / 2)))
+    # R2 fix: use BCa (bias-corrected accelerated) bootstrap, not plain percentile.
+    # Matches the pre-registration commitment (prereg.md §6).
+    observed = statistic(x, y)
+    z0 = scipy_stats.norm.ppf(np.mean(boot_stats < observed) + 1e-12)
+    # Jackknife acceleration over the pooled paired re-evaluation
+    n_paired = min(n_x, n_y)
+    jack_stats = np.array([
+        statistic(np.delete(x[:n_paired], i), np.delete(y[:n_paired], i))
+        for i in range(n_paired)
+    ])
+    jack_mean = np.mean(jack_stats)
+    num = np.sum((jack_mean - jack_stats) ** 3)
+    denom = 6 * (np.sum((jack_mean - jack_stats) ** 2) ** 1.5)
+    a = num / denom if denom != 0 else 0.0
+
+    z_lo = scipy_stats.norm.ppf(alpha / 2)
+    z_hi = scipy_stats.norm.ppf(1 - alpha / 2)
+
+    def _adj(z_alpha):
+        z_adj = z0 + (z0 + z_alpha) / (1 - a * (z0 + z_alpha))
+        return float(scipy_stats.norm.cdf(z_adj) * 100)
+
+    ci_lo = float(np.percentile(boot_stats, _adj(z_lo)))
+    ci_hi = float(np.percentile(boot_stats, _adj(z_hi)))
     return observed, ci_lo, ci_hi
 
 
@@ -173,8 +195,27 @@ def spearman_with_ci(
         boot_rhos.append(r)
     boot_rhos = np.array(boot_rhos)
 
-    ci_lo = float(np.percentile(boot_rhos, 100 * alpha / 2))
-    ci_hi = float(np.percentile(boot_rhos, 100 * (1 - alpha / 2)))
+    # R2 fix: BCa bootstrap (bias-corrected accelerated), matching prereg.md §6.
+    # Plain percentile produces CIs ~2x too narrow at n<200 for Spearman.
+    z0 = scipy_stats.norm.ppf(np.mean(boot_rhos < rho) + 1e-12)
+    jack_rhos = np.array([
+        scipy_stats.spearmanr(np.delete(x_clean, i), np.delete(y_clean, i))[0]
+        for i in range(n)
+    ])
+    jack_mean = np.mean(jack_rhos)
+    num = np.sum((jack_mean - jack_rhos) ** 3)
+    denom = 6 * (np.sum((jack_mean - jack_rhos) ** 2) ** 1.5)
+    a = num / denom if denom != 0 else 0.0
+
+    z_lo = scipy_stats.norm.ppf(alpha / 2)
+    z_hi = scipy_stats.norm.ppf(1 - alpha / 2)
+
+    def _adj(z_alpha):
+        z_adj = z0 + (z0 + z_alpha) / (1 - a * (z0 + z_alpha))
+        return float(scipy_stats.norm.cdf(z_adj) * 100)
+
+    ci_lo = float(np.percentile(boot_rhos, _adj(z_lo)))
+    ci_hi = float(np.percentile(boot_rhos, _adj(z_hi)))
 
     return {
         "rho": float(rho),
@@ -228,8 +269,27 @@ def auroc_with_ci(
             pass
 
     boot_aucs = np.array(boot_aucs)
-    ci_lo = float(np.percentile(boot_aucs, 100 * alpha / 2))
-    ci_hi = float(np.percentile(boot_aucs, 100 * (1 - alpha / 2)))
+
+    # R2 fix: BCa bootstrap, matching prereg.md §6.
+    z0 = scipy_stats.norm.ppf(np.mean(boot_aucs < auc) + 1e-12)
+    jack_aucs = np.array([
+        roc_auc_score(np.delete(labels_clean, i), np.delete(scores_clean, i))
+        for i in range(len(scores_clean))
+    ])
+    jack_mean = np.mean(jack_aucs)
+    num = np.sum((jack_mean - jack_aucs) ** 3)
+    denom = 6 * (np.sum((jack_mean - jack_aucs) ** 2) ** 1.5)
+    a = num / denom if denom != 0 else 0.0
+
+    z_lo = scipy_stats.norm.ppf(alpha / 2)
+    z_hi = scipy_stats.norm.ppf(1 - alpha / 2)
+
+    def _adj(z_alpha):
+        z_adj = z0 + (z0 + z_alpha) / (1 - a * (z0 + z_alpha))
+        return float(scipy_stats.norm.cdf(z_adj) * 100)
+
+    ci_lo = float(np.percentile(boot_aucs, _adj(z_lo)))
+    ci_hi = float(np.percentile(boot_aucs, _adj(z_hi)))
 
     return {
         "auc": float(auc),

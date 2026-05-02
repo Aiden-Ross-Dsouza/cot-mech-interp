@@ -115,10 +115,15 @@ def main():
     if aoc_path.exists():
         aoc_df = pd.read_parquet(aoc_path)
         b_agd = agd_df[agd_df.get("regime_label", agd_df.get("fname", "")).str.contains("B", na=False)].copy()
-        # A2 fix: Regime B items have synthetic IDs (e.g. 'q145_trunc25').
-        # Merge on base_item_id → original aoc item_id, otherwise inner join = 0 rows.
-        merged = b_agd.merge(aoc_df, left_on="base_item_id", right_on="item_id", how="inner")
-        logger.info(f"H1 pairs (Regime B): {len(merged)}")
+        # R3 fix: Regime B has 4 pair variants per base item (3 truncations + 1 mistake).
+        # Each shares the same AOC value — averaging AGD per base_item_id gives one
+        # independent observation per item, avoiding CI inflation from pseudo-replication.
+        b_agd_per_item = (
+            b_agd.groupby("base_item_id")["agd"].mean().reset_index()
+        )
+        # A2 fix: merge on base_item_id → original aoc item_id
+        merged = b_agd_per_item.merge(aoc_df, left_on="base_item_id", right_on="item_id", how="inner")
+        logger.info(f"H1 pairs (Regime B, per-item): {len(merged)}")
 
         if len(merged) >= 30:
             h1_result = spearman_with_ci(

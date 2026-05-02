@@ -91,14 +91,25 @@ def generate_pair(tl_model, tokenizer, row: dict, cfg: Config) -> int:
             
         target_for_attr = target if target else "A"
         # Clean target of any rogue parentheses that might have sneaked in from the dataset (e.g. '(A)')
-        target_for_attr = target_for_attr.replace("(", "").replace(")", "")
+        target_for_attr = target_for_attr.replace("(", "").replace(")", "").strip()
         
         # Always prepend space to target_for_attr because we will strip all spaces from the prompt end
         if not target_for_attr.startswith(" "):
             target_for_attr = " " + target_for_attr
-            
-        if target and clean_prompt.endswith(target):
-            clean_prompt = clean_prompt[:-len(target)]
+
+        # M2 fix: Strip any trailing answer token from the prompt so attribution
+        # is performed on the position *before* the answer is given.
+        # CoTs from Gemma-2B may end with "Answer: A", "Answer: (A)", or "Answer:(A)".
+        # We need to strip all of these variants, not just the bare letter.
+        import re as _re
+        # Pattern: optional whitespace, optional '(', the target letter, optional ')'
+        _trailing = _re.compile(
+            r'\s*\(?'
+            + _re.escape(target_for_attr.strip())
+            + r'\)?\s*$',
+            _re.IGNORECASE,
+        )
+        clean_prompt = _trailing.sub("", clean_prompt).rstrip()
         
         # Standardize trigger: Ensure prompt always ends with "Answer:" (NO trailing space)
         # We verified that Gemma 2 expects exactly "Answer:" to output " A" or " B".

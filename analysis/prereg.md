@@ -11,14 +11,25 @@
 
 ### H1 — Faithfulness signal (Regime B — Mistake/Truncation)
 
-**Statement.** The Spearman rank correlation between AGD and the composite Lanham AOC score,
+**Statement.** The Spearman rank correlation between AGD and `1 − AOC_composite`,
 computed on the held-out test set (Regime B pairs only), satisfies:
 
-$$\rho_{\text{Spearman}}(\text{AGD}, \text{AOC\_composite}) \geq 0.30$$
+$$\rho_{\text{Spearman}}(\text{AGD},\ 1 - \text{AOC\_composite}) \geq 0.30$$
 with $p < 0.01$ (two-sided, BCa bootstrap, 5000 resamples, item-level).
 
-**Falsified if:** $|\rho| < 0.15$ **and** the 95% BCa bootstrap CI for $\rho$ excludes 0.20
-on both sides, evaluated on $\geq 100$ Regime B test pairs.
+*Sign convention note (added 2026-05-02):* Lanham et al. (2023) define AOC such that
+**high AOC = more faithful** (i.e. the model *is* sensitive to the CoT, so AOC is
+*low* when the model is post-hoc / unfaithful). AGD is designed to be *high* when
+behaviour is unfaithful. Therefore we correlate AGD with `1 − AOC` so that both
+quantities point in the "unfaithfulness" direction and the pre-registered threshold
+`ρ ≥ 0.30` corresponds to a positive correlation. All code in scripts 09 and 10
+computes `1 − aoc_composite` before calling `spearman_with_ci`. The falsification
+clause below uses `|ρ| < 0.15` which is sign-agnostic, but the test in script 10
+enforces the directional threshold `ρ ≥ 0.30` without `abs()`.
+
+**Falsified if:** $\rho < 0.15$ **and** the 95% BCa bootstrap CI for $\rho$ excludes 0.20
+on both sides, evaluated on $\geq 100$ Regime B test pairs (one row per base item after
+averaging AGD across pair variants).
 
 **Exact metric:** `analysis/results_test.json → H1_spearman.rho`
 
