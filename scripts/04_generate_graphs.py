@@ -102,6 +102,9 @@ def generate_pair(tl_model, tokenizer, row: dict, cfg: Config) -> int:
         # CoTs from Gemma-2B may end with "Answer: A", "Answer: (A)", or "Answer:(A)".
         # We need to strip all of these variants, not just the bare letter.
         import re as _re
+        # B2 fix: first strip trailing punctuation/whitespace so that endings like
+        # "the answer is (A)." (with period) don't defeat the regex match.
+        clean_prompt = clean_prompt.rstrip(".!?, \n\t")
         # Pattern: optional whitespace, optional '(', the target letter, optional ')'
         _trailing = _re.compile(
             r'\s*\(?'

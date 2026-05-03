@@ -314,14 +314,20 @@ def incremental_auroc(
 ) -> Dict[str, float]:
     """Compute ΔAUROC = AUROC(with AGD) - AUROC(without AGD).
 
-    Each bootstrap iteration:
-      1. Resample with replacement.
-      2. Fit two logistic regressions on the resample.
-      3. Evaluate AUROC on a held-out 20% split.
+    B1 fix: The point estimate (delta_auc) is now the **bootstrap median** of the
+    honest out-of-sample ΔAUROC (each iteration: resample → fit on 80% → eval on 20%).
+    The previously used in-sample delta was inflated by ~0.02-0.05 for small n,
+    which could push the estimate past the H3 threshold of 0.05 spuriously.
+
+    The in-sample values are retained as `auc_with_insample` and
+    `auc_without_insample` for diagnostic / sanity-check purposes.
+
+    CI uses BCa bootstrap, matching prereg.md §6.
 
     Returns
     -------
-    dict with keys: delta_auc, auc_with, auc_without, ci_lo, ci_hi, p_value
+    dict with keys: delta_auc, auc_with_insample, auc_without_insample,
+                    ci_lo, ci_hi, p_value, n_boot_valid
     """
     def _bootstrap_delta_auroc(feat_full, feat_reduced, y, rng_seed):
         rng = np.random.default_rng(rng_seed)
@@ -355,7 +361,7 @@ def incremental_auroc(
         auc_red = roc_auc_score(y_te, lr_red.predict_proba(X_red_te)[:, 1])
         return auc_full - auc_red
 
-    # Observed delta
+    # In-sample values retained for diagnostics only — NOT used as the headline estimate.
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         lr_full_obs = LogisticRegression(max_iter=500, random_state=42)
@@ -363,9 +369,8 @@ def incremental_auroc(
         lr_red_obs = LogisticRegression(max_iter=500, random_state=42)
         lr_red_obs.fit(features_without_agd, labels)
 
-    auc_with = roc_auc_score(labels, lr_full_obs.predict_proba(features_with_agd)[:, 1])
-    auc_without = roc_auc_score(labels, lr_red_obs.predict_proba(features_without_agd)[:, 1])
-    delta_obs = auc_with - auc_without
+    auc_with_insample = roc_auc_score(labels, lr_full_obs.predict_proba(features_with_agd)[:, 1])
+    auc_without_insample = roc_auc_score(labels, lr_red_obs.predict_proba(features_without_agd)[:, 1])
 
     # Bootstrap
     boot_deltas = [
@@ -374,14 +379,44 @@ def incremental_auroc(
     ]
     boot_deltas = np.array([d for d in boot_deltas if not np.isnan(d)])
 
-    ci_lo = float(np.percentile(boot_deltas, 100 * alpha / 2))
-    ci_hi = float(np.percentile(boot_deltas, 100 * (1 - alpha / 2)))
+    # B1 fix: use bootstrap median as the honest, out-of-sample point estimate.
+    # This avoids the ~0.02-0.05 in-sample inflation that could falsely pass H3.
+    delta_obs = float(np.median(boot_deltas))
+
     p_value = float(np.mean(boot_deltas <= 0))  # one-sided: P(delta ≤ 0 | H0)
 
+    # BCa CI — matching prereg.md §6 (R2 fix carried forward to H3)
+    z0 = scipy_stats.norm.ppf(np.mean(boot_deltas < delta_obs) + 1e-12)
+    # Jackknife acceleration: re-run one-sample bootstrap without each observation
+    jack_deltas = np.array([
+        _bootstrap_delta_auroc(
+            np.delete(features_with_agd, i, axis=0),
+            np.delete(features_without_agd, i, axis=0),
+            np.delete(labels, i),
+            rng_seed=seed,
+        )
+        for i in range(len(labels))
+    ])
+    jack_deltas = jack_deltas[~np.isnan(jack_deltas)]
+    jack_mean = np.mean(jack_deltas)
+    num = np.sum((jack_mean - jack_deltas) ** 3)
+    denom = 6 * (np.sum((jack_mean - jack_deltas) ** 2) ** 1.5)
+    a = num / denom if denom != 0 else 0.0
+
+    z_lo = scipy_stats.norm.ppf(alpha / 2)
+    z_hi = scipy_stats.norm.ppf(1 - alpha / 2)
+
+    def _adj(z_alpha):
+        z_adj = z0 + (z0 + z_alpha) / (1 - a * (z0 + z_alpha))
+        return float(scipy_stats.norm.cdf(z_adj) * 100)
+
+    ci_lo = float(np.percentile(boot_deltas, _adj(z_lo)))
+    ci_hi = float(np.percentile(boot_deltas, _adj(z_hi)))
+
     return {
-        "delta_auc": float(delta_obs),
-        "auc_with": float(auc_with),
-        "auc_without": float(auc_without),
+        "delta_auc": delta_obs,                       # B1 fix: bootstrap median (honest)
+        "auc_with_insample": float(auc_with_insample),   # diagnostic
+        "auc_without_insample": float(auc_without_insample),  # diagnostic
         "ci_lo": ci_lo,
         "ci_hi": ci_hi,
         "p_value": p_value,

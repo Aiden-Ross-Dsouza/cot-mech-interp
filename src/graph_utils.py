@@ -130,8 +130,8 @@ def generate_attribution_graph(
         prompt=prompt,
         model=tl_model,
         attribution_targets=[target_token],
-        max_feature_nodes=512,  # Raised from k*2=128; allows meaningful k-sweep ablations up to 256
-        batch_size=64,          # Kept moderate to avoid peak VRAM spikes
+        max_feature_nodes=256,  # Raised from k*2=128; allows meaningful k-sweep ablations up to 256
+        batch_size=128,         # Maximized for L40S 48GB VRAM to process attributions at blisteringly fast speeds
         verbose=True,
     )
 

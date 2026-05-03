@@ -34,30 +34,27 @@ image = (
         "pytest>=8.0.0",
         "pytest-cov>=5.0.0"
     )
+    # debian_slim has no git — install it first so pip can clone from GitHub
+    .run_commands("apt-get update && apt-get install -y git")
     # Install circuit-tracer from source as specified in requirements.txt
     .pip_install("git+https://github.com/decoderesearch/circuit-tracer.git")
+    # Modal 1.x: Add local files directly to the image
+    .add_local_dir("src", remote_path="/root/cot-mech-interp/src")
+    .add_local_dir("scripts", remote_path="/root/cot-mech-interp/scripts")
+    .add_local_file("config.yaml", remote_path="/root/cot-mech-interp/config.yaml")
 )
 
 # 3. Persistent Volume for data and artifacts
 storage_vol = modal.Volume.from_name("cot-interp-storage", create_if_missing=True)
 
-# 4. We map the local project files into the Modal container
-# We don't mount data/ or artifacts/ here because they live in the Volume
-project_mounts = [
-    modal.Mount.from_local_dir("src", remote_path="/root/cot-mech-interp/src"),
-    modal.Mount.from_local_dir("scripts", remote_path="/root/cot-mech-interp/scripts"),
-    modal.Mount.from_local_file("config.yaml", remote_path="/root/cot-mech-interp/config.yaml"),
-]
-
-# 5. Remote function to execute any script
+# 4. Remote function to execute any script
 @app.function(
     image=image,
-    gpu="L4",  # L4 is a good default for 2B/9B models. Can be changed to A100G or A10G if needed.
+    gpu="L40S",  # 48GB VRAM is strictly required because Phase 3 (Logit Attributions) OOMs on 24GB
     volumes={"/mnt/storage": storage_vol},
-    mounts=project_mounts,
     secrets=[
         # This will securely pass your HF_TOKEN to the container so you can download Gemma
-        modal.Secret.from_name("my-huggingface-secret", required_keys=["HF_TOKEN"])
+        modal.Secret.from_name("Hugging-face-secret", required_keys=["HF_TOKEN"])
     ],
     timeout=86400,  # Allow up to 24 hours of execution time
 )
@@ -81,7 +78,8 @@ def run_script_remote(script_path: str):
     # Run the script using the same Python executable in the container
     cmd = [sys.executable, script_path, "--config", "config.yaml"]
     
-    result = subprocess.run(cmd)
+    # Stream stdout/stderr in real-time so logs appear in the Modal dashboard
+    result = subprocess.run(cmd, stdout=sys.stdout, stderr=sys.stderr)
     
     if result.returncode != 0:
         print(f"--- Error: Script {script_path} failed with return code {result.returncode} ---")
@@ -96,9 +94,5 @@ def main(script: str = "scripts/03b_turpin_prerun.py"):
     """
     Usage: modal run modal_app.py --script scripts/04_generate_graphs.py
     """
-    if not os.path.exists(script):
-        print(f"Error: Local script '{script}' not found. Are you running this from the project root?")
-        sys.exit(1)
-        
     print(f"Deploying to Modal and executing: {script}")
     run_script_remote.remote(script)
