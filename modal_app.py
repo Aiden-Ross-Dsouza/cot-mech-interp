@@ -50,7 +50,8 @@ storage_vol = modal.Volume.from_name("cot-interp-storage", create_if_missing=Tru
 # 4. Remote function to execute any script
 @app.function(
     image=image,
-    gpu="L40S",  # 48GB VRAM is strictly required because Phase 3 (Logit Attributions) OOMs on 24GB
+    gpu="A100-80GB",  # 80GB VRAM is the best ROI for the long graph-attribution prompts.
+    memory=65536,
     volumes={"/mnt/storage": storage_vol},
     secrets=[
         # This will securely pass your HF_TOKEN to the container so you can download Gemma
@@ -59,6 +60,8 @@ storage_vol = modal.Volume.from_name("cot-interp-storage", create_if_missing=Tru
     timeout=86400,  # Allow up to 24 hours of execution time
 )
 def run_script_remote(script_path: str):
+    os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
     # Set working directory to our project
     os.chdir("/root/cot-mech-interp")
     
