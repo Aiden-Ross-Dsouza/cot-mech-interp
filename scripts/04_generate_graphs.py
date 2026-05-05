@@ -63,6 +63,7 @@ def iter_pair_rows(cfg: Config, regimes: List[str], pilot: bool) -> Iterator[dic
                 continue
             with jsonlines.open(fpath) as reader:
                 for row in reader:
+                    row["_source_regime"] = regime
                     yield row
                     count += 1
                     if limit and count >= limit:
@@ -75,6 +76,20 @@ def generate_pair(tl_model, tokenizer, row: dict, cfg: Config) -> int:
     iid = row["item_id"]
     target = row.get("target_token", "")
     n_new = 0
+
+    def log_missing(reason: str, tokens: int, chars: int, condition: str):
+        manifest_path = Path(cfg.paths.graphs).parent / "missing_graphs_manifest.jsonl"
+        manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        with jsonlines.open(manifest_path, mode="a") as writer:
+            writer.write({
+                "item_id": iid,
+                "condition": condition,
+                "regime": row.get("_source_regime", "unknown"),
+                "chars": chars,
+                "tokens": tokens,
+                "reason": reason,
+                "timestamp": time.time()
+            })
 
     for cond_key in ("condition0", "condition1"):
         cond = row[cond_key]
@@ -132,6 +147,7 @@ def generate_pair(tl_model, tokenizer, row: dict, cfg: Config) -> int:
                 f"  [{iid}/{cond}] Prompt is {n_tokens} tokens "
                 f"(>{max_prompt_tokens}). Skipping to avoid graph-attribution OOM."
             )
+            log_missing(f"Tokens exceeded limit (> {max_prompt_tokens})", n_tokens, len(clean_prompt), cond)
             continue
 
         try:
@@ -150,6 +166,7 @@ def generate_pair(tl_model, tokenizer, row: dict, cfg: Config) -> int:
             n_new += 1
         except Exception as e:
             logger.error(f"  [{iid}/{cond}] Graph generation failed: {e}")
+            log_missing(f"Exception: {str(e)}", n_tokens, len(clean_prompt), cond)
 
     return n_new
 
