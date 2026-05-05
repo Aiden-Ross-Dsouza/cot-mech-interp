@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Iterator, List
 
 # Fix for CUDA OOM and fragmentation
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+torch.cuda.set_per_process_memory_fraction(0.9, 0)  # Cap VRAM to 90% for local Quadro RTX 6000
 
 import jsonlines
 from tqdm import tqdm
@@ -122,6 +122,13 @@ def generate_pair(tl_model, tokenizer, row: dict, cfg: Config) -> int:
                 clean_prompt = clean_prompt.rstrip(":") + "Answer:"
             else:
                 clean_prompt = clean_prompt + "\n\nAnswer:"
+
+        # Proactive VRAM Saver for 90% Cap:
+        # Capping the RTX 6000 to 21.6 GB (90%) allows for moderately long prompts.
+        # We skip >1000 chars to prevent hard OOMs or system freezes.
+        if len(clean_prompt) > 1000:
+            logger.warning(f"  [{iid}/{cond}] Prompt is {len(clean_prompt)} chars (>1000). Skipping to respect 90% VRAM cap.")
+            continue
 
         try:
             torch.cuda.empty_cache() # Clear VRAM before starting heavy attribution
