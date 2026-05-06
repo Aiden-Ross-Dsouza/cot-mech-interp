@@ -85,7 +85,10 @@ def ablation_alpha(cfg, pairs_df, aoc_df, flip_df) -> Dict[str, Any]:
                               n_boot=500)["rho"] if len(merged_b) >= 20 else None
 
         # H2
-        c_df = agd_df[agd_df["fname"].str.contains("C", na=False)]
+        c_df = agd_df[agd_df["fname"].str.contains("C", na=False)].copy()
+        # BCa fix: drop pre-existing unfaithful_flip to avoid _x/_y suffix issue
+        if "unfaithful_flip" in c_df.columns:
+            c_df = c_df.drop(columns=["unfaithful_flip"])
         merged_c = c_df.merge(flip_df[["item_id", "unfaithful_flip"]], on="item_id",
                               how="inner") if flip_df is not None else pd.DataFrame()
         h2 = auroc_with_ci(merged_c["agd"].values,
@@ -94,7 +97,9 @@ def ablation_alpha(cfg, pairs_df, aoc_df, flip_df) -> Dict[str, Any]:
             if len(merged_c) >= 20 and merged_c["unfaithful_flip"].sum() >= 5 else None
 
         results[str(alpha)] = {"h1_rho": h1, "h2_auroc": h2}
-        logger.info(f"  alpha={alpha}: H1={h1:.3f if h1 else 'N/A'}, H2={h2:.3f if h2 else 'N/A'}")
+        h1_str = f"{h1:.3f}" if h1 is not None else "N/A"
+        h2_str = f"{h2:.3f}" if h2 is not None else "N/A"
+        logger.info(f"  alpha={alpha}: H1={h1_str}, H2={h2_str}")
 
     return results
 
@@ -115,7 +120,8 @@ def ablation_k(cfg, pairs_df, aoc_df, flip_df) -> Dict[str, Any]:
         h1 = spearman_with_ci(merged_b["agd"].values, merged_b["aoc_composite"].values,
                               n_boot=500)["rho"] if len(merged_b) >= 20 else None
         results[str(k)] = {"h1_rho": h1}
-        logger.info(f"  k={k}: H1={h1:.3f if h1 else 'N/A'}")
+        h1_str = f"{h1:.3f}" if h1 is not None else "N/A"
+        logger.info(f"  k={k}: H1={h1_str}")
     return results
 
 
@@ -197,7 +203,9 @@ def ablation_pruning_threshold(cfg, pairs_df, aoc_df) -> Dict[str, Any]:
             "proxy_k": proxy_k,
             "mean_agd": float(valid["agd"].mean()) if len(valid) else None,
         }
-        logger.info(f"  pruning~={threshold} (k={proxy_k}): mean AGD={results[str(threshold)]['mean_agd']:.3f if results[str(threshold)]['mean_agd'] else 'N/A'}")
+        mean_agd = results[str(threshold)]["mean_agd"]
+        mean_str = f"{mean_agd:.3f}" if mean_agd is not None else "N/A"
+        logger.info(f"  pruning~={threshold} (k={proxy_k}): mean AGD={mean_str}")
     return results
 
 

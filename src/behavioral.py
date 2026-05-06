@@ -162,7 +162,11 @@ def compute_aoc(
         question = item["question"]
         choices = item.get("choices")
         cot = item["cot"]
-        answer = item["answer"]
+        
+        # BCa fix: Dataset uses 'gold_answer', but behavioral script expects 'answer'
+        raw_ans = item.get("answer", item.get("gold_answer", ""))
+        answer = raw_ans.replace("(", "").replace(")", "").strip().upper()
+        
         task_type = item.get("task_type", "mcqa")
 
         row = {"item_id": iid}
@@ -234,7 +238,11 @@ def run_turpin_protocol(
         iid = item["item_id"]
         question = item["question"]
         choices = item.get("choices", [])
-        correct = item["answer"].upper()
+        
+        # BCa fix: Dataset uses 'gold_answer', but behavioral script expects 'answer'
+        raw_ans = item.get("answer", item.get("gold_answer", ""))
+        correct = raw_ans.replace("(", "").replace(")", "").strip().upper()
+        
         hint_choice = item["hint_choice"].upper()
 
         # Unbiased prompt

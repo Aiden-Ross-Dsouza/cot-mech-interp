@@ -151,6 +151,11 @@ def main():
         flip_df = pd.read_parquet(flip_path)
         c_mask = agd_df.get("fname", pd.Series([""] * len(agd_df))).str.contains("C", na=False)
         c_agd = agd_df[c_mask].copy()
+        
+        # BCa fix: If unfaithful_flip already exists, drop before merge to avoid suffix issue.
+        if "unfaithful_flip" in c_agd.columns:
+            c_agd = c_agd.drop(columns=["unfaithful_flip"])
+
         merged_c = c_agd.merge(
             flip_df[["item_id", "unfaithful_flip"]],
             on="item_id", how="inner"

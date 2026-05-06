@@ -144,6 +144,12 @@ def evaluate_on_split(pairs_df: pd.DataFrame, split_ids: set, cfg, alpha: float,
         flip_df = pd.read_parquet(flip_path)
         c_agd = agd_df[agd_df["regime"] == "C"].copy() if "regime" in agd_df else \
                 agd_df[agd_df.get("regime_label", "") == "C"].copy()
+        
+        # BCa fix: If unfaithful_flip already exists in AGD df, drop it before merging 
+        # to avoid the _x/_y suffix issue.
+        if "unfaithful_flip" in c_agd.columns:
+            c_agd = c_agd.drop(columns=["unfaithful_flip"])
+
         merged_c = c_agd.merge(
             flip_df[["item_id", "unfaithful_flip"]],
             on="item_id", how="inner"

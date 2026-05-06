@@ -144,8 +144,13 @@ def draw_f2_correlation(cfg, agd_df: pd.DataFrame, aoc_df: pd.DataFrame,
                          results: dict, out_path: Path):
     """Scatter: AGD (x) vs. AOC (y) for Regime B, coloured by task."""
     # Merge
-    b_agd = agd_df[agd_df["fname"].str.contains("B", na=False)].copy()
-    merged = b_agd.merge(aoc_df, on="item_id", how="inner").dropna(subset=["agd", "aoc_composite"])
+    regime_col = "regime_label" if "regime_label" in agd_df.columns else "regime"
+    b_agd = agd_df[agd_df[regime_col].str.contains("B", na=False)].copy()
+    
+    # BCa fix: merge on base_item_id (e.g. bbh_0001_trunc25) -> aoc item_id (e.g. bbh_0001)
+    merge_left = "base_item_id" if "base_item_id" in b_agd.columns else "item_id"
+    merged = b_agd.merge(aoc_df, left_on=merge_left, right_on="item_id", how="inner")
+    merged = merged.dropna(subset=["agd", "aoc_composite"])
     if merged.empty:
         logger.warning("F2: no data to plot.")
         return
@@ -199,7 +204,11 @@ def draw_f3_auroc(cfg, agd_df: pd.DataFrame, flip_df: pd.DataFrame,
     """ROC curves for AGD vs. baselines on hint-flip prediction."""
     from sklearn.metrics import roc_curve
 
-    c_agd = agd_df[agd_df["fname"].str.contains("C", na=False)].copy()
+    regime_col = "regime_label" if "regime_label" in agd_df.columns else "regime"
+    c_agd = agd_df[agd_df[regime_col].str.contains("C", na=False)].copy()
+    # BCa fix: drop pre-existing unfaithful_flip to avoid _x/_y suffix issue
+    if "unfaithful_flip" in c_agd.columns:
+        c_agd = c_agd.drop(columns=["unfaithful_flip"])
     merged = c_agd.merge(flip_df[["item_id", "unfaithful_flip"]], on="item_id", how="inner")
     merged = merged.dropna(subset=["agd", "unfaithful_flip"])
     if merged.empty or merged["unfaithful_flip"].sum() < 5:
@@ -266,7 +275,7 @@ def generate_table1(cfg, agd_df: pd.DataFrame, aoc_df: Optional[pd.DataFrame],
     """Generate LaTeX table with per-task AGD mean ± std and AOC."""
     rows = []
 
-    task_col = "task" if "task" in agd_df.columns else "fname"
+    task_col = "task" if "task" in agd_df.columns else ("regime_label" if "regime_label" in agd_df.columns else "regime")
     for task, group in agd_df.groupby(task_col):
         valid = group.dropna(subset=["agd"])
         if valid.empty:
@@ -316,11 +325,14 @@ Task & Regime & AGD ($\bar{x} \pm \sigma$) & AOC & $N$ \\
 """
 
     lines = []
+    # BCa fix: move LaTeX key access outside f-string to avoid backslash SyntaxError
+    agd_col = r"AGD ($\bar{x} \pm \sigma$)"
     for _, row in df_table.iterrows():
+        agd_val = row[agd_col]
         lines.append(
             f"{row['Task']} & "
             f"{row['Regime']} & "
-            f"{row[r'AGD ($\bar{x} \\pm \\sigma$)']} & "
+            f"{agd_val} & "
             f"{row['AOC']} & "
             f"{row['N']} \\\\"
         )

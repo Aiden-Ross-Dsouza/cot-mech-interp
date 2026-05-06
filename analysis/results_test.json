@@ -1,0 +1,45 @@
+{
+  "H1_spearman": {
+    "rho": -0.4751317138426394,
+    "p": 0.0004890977559737312,
+    "ci_lo": -0.6943392983556106,
+    "ci_hi": -0.10837063861355839,
+    "n": 50
+  },
+  "H2_auroc_agd": {
+    "auc": 0.5177696078431373,
+    "ci_lo": 0.4076861411070374,
+    "ci_hi": 0.6249343503395646,
+    "n_pos": 48,
+    "n_neg": 68
+  },
+  "holm_bonferroni": {
+    "test_names": [
+      "H1_spearman",
+      "H2_auroc"
+    ],
+    "raw_p": [
+      0.0004890977559737312,
+      0.05
+    ],
+    "corrected_p": [
+      0.0009781955119474624,
+      0.05
+    ],
+    "rejected": [
+      true,
+      true
+    ],
+    "order": [
+      0,
+      1
+    ]
+  },
+  "verdict": {
+    "H1_passed": false,
+    "H2_passed": false,
+    "H3_passed": null,
+    "alpha_locked": 1.0,
+    "k_locked": 32
+  }
+}
