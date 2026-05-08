@@ -1,0 +1,57 @@
+{
+  "H1_pano_spearman": {
+    "rho": 0.44377427199203445,
+    "p": 2.835852505314587e-08,
+    "ci_lo": 0.288130630396392,
+    "ci_hi": 0.5627879992867125,
+    "n": 143
+  },
+  "H1_deltaAGD_spearman": {
+    "rho": -0.11149644187243471,
+    "p": 0.25517593516881987,
+    "ci_lo": -0.3209679585041369,
+    "ci_hi": 0.11078958005663397,
+    "n": 106
+  },
+  "H2_deltaAGD_auroc": {
+    "auc": 0.5623949579831933,
+    "ci_lo": 0.4617521295484379,
+    "ci_hi": 0.6552197291328893,
+    "n_pos": 56,
+    "n_neg": 85
+  },
+  "H2_panoDiv_auroc": {
+    "auc": 0.46860282574568285,
+    "ci_lo": 0.40155037198154797,
+    "ci_hi": 0.5422346742956947,
+    "n_pos": 105,
+    "n_neg": 182
+  },
+  "holm_bonferroni": {
+    "test_names": [
+      "H1_pano_spearman",
+      "H2_deltaAGD_auroc"
+    ],
+    "raw_p": [
+      2.835852505314587e-08,
+      0.05
+    ],
+    "corrected_p": [
+      5.671705010629174e-08,
+      0.05
+    ],
+    "rejected": [
+      true,
+      true
+    ],
+    "order": [
+      0,
+      1
+    ]
+  },
+  "verdict": {
+    "H1_pano_passed": true,
+    "H2_deltaAGD_passed": false,
+    "H3_passed": false
+  }
+}

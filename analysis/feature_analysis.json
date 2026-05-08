@@ -1,0 +1,366 @@
+{
+  "high_divergence_examples": [
+    {
+      "item_id": "mmlu_moral_scenarios_0000_mistake",
+      "pano_div": 0.9863,
+      "n_shared": 42,
+      "n_lost_from_clean": 22,
+      "n_gained_in_mistake": 22,
+      "top5_lost": [
+        {
+          "concept": "L24_F12351",
+          "influence": 0.0325
+        },
+        {
+          "concept": "L22_F14263",
+          "influence": 0.0264
+        },
+        {
+          "concept": "L25_F15341",
+          "influence": 0.0257
+        },
+        {
+          "concept": "L24_F4210",
+          "influence": 0.0117
+        },
+        {
+          "concept": "L24_F4565",
+          "influence": 0.0117
+        }
+      ],
+      "top5_gained": [
+        {
+          "concept": "L24_F6157",
+          "influence": 0.0003
+        },
+        {
+          "concept": "L25_F16057",
+          "influence": 0.0001
+        },
+        {
+          "concept": "L21_F2035",
+          "influence": 0.0001
+        },
+        {
+          "concept": "L21_F7073",
+          "influence": 0.0001
+        },
+        {
+          "concept": "L25_F12716",
+          "influence": 0.0001
+        }
+      ],
+      "top5_shared": [
+        {
+          "concept": "L22_F11133",
+          "influence": 0.0215
+        },
+        {
+          "concept": "L18_F10940",
+          "influence": 0.0179
+        },
+        {
+          "concept": "L23_F14910",
+          "influence": 0.0076
+        },
+        {
+          "concept": "L15_F7214",
+          "influence": 0.0073
+        },
+        {
+          "concept": "L25_F4717",
+          "influence": 0.0067
+        }
+      ]
+    },
+    {
+      "item_id": "bbh_hyperbaton_0011_mistake",
+      "pano_div": 0.9506,
+      "n_shared": 50,
+      "n_lost_from_clean": 14,
+      "n_gained_in_mistake": 14,
+      "top5_lost": [
+        {
+          "concept": "L25_F5714",
+          "influence": 0.0124
+        },
+        {
+          "concept": "L24_F15961",
+          "influence": 0.0056
+        },
+        {
+          "concept": "L22_F4339",
+          "influence": 0.0028
+        },
+        {
+          "concept": "L22_F4859",
+          "influence": 0.002
+        },
+        {
+          "concept": "L23_F14792",
+          "influence": 0.0016
+        }
+      ],
+      "top5_gained": [
+        {
+          "concept": "L25_F2605",
+          "influence": 0.0001
+        },
+        {
+          "concept": "L18_F16269",
+          "influence": 0.0001
+        },
+        {
+          "concept": "L18_F7137",
+          "influence": 0.0001
+        },
+        {
+          "concept": "L23_F10308",
+          "influence": 0.0001
+        },
+        {
+          "concept": "L16_F10031",
+          "influence": 0.0001
+        }
+      ],
+      "top5_shared": [
+        {
+          "concept": "L22_F11133",
+          "influence": 0.0131
+        },
+        {
+          "concept": "L18_F10940",
+          "influence": 0.0088
+        },
+        {
+          "concept": "L19_F10674",
+          "influence": 0.0062
+        },
+        {
+          "concept": "L24_F13541",
+          "influence": 0.0047
+        },
+        {
+          "concept": "L0_F13004",
+          "influence": 0.0035
+        }
+      ]
+    },
+    {
+      "item_id": "mmlu_moral_scenarios_0024_mistake",
+      "pano_div": 0.9249,
+      "n_shared": 53,
+      "n_lost_from_clean": 11,
+      "n_gained_in_mistake": 11,
+      "top5_lost": [
+        {
+          "concept": "L20_F5304",
+          "influence": 0.0073
+        },
+        {
+          "concept": "L25_F5714",
+          "influence": 0.0068
+        },
+        {
+          "concept": "L24_F15961",
+          "influence": 0.005
+        },
+        {
+          "concept": "L20_F13500",
+          "influence": 0.0027
+        },
+        {
+          "concept": "L18_F1986",
+          "influence": 0.001
+        }
+      ],
+      "top5_gained": [
+        {
+          "concept": "L24_F6157",
+          "influence": 0.0002
+        },
+        {
+          "concept": "L22_F11003",
+          "influence": 0.0001
+        },
+        {
+          "concept": "L25_F16057",
+          "influence": 0.0001
+        },
+        {
+          "concept": "L24_F11525",
+          "influence": 0.0001
+        },
+        {
+          "concept": "L17_F4507",
+          "influence": 0.0001
+        }
+      ],
+      "top5_shared": [
+        {
+          "concept": "L22_F11133",
+          "influence": 0.0146
+        },
+        {
+          "concept": "L18_F10940",
+          "influence": 0.0077
+        },
+        {
+          "concept": "L23_F4543",
+          "influence": 0.0046
+        },
+        {
+          "concept": "L24_F13541",
+          "influence": 0.0041
+        },
+        {
+          "concept": "L23_F14910",
+          "influence": 0.003
+        }
+      ]
+    }
+  ],
+  "low_divergence_examples": [
+    {
+      "item_id": "bbh_snarks_0013_mistake",
+      "pano_div": 0.0801,
+      "n_shared": 62,
+      "n_lost_from_clean": 2,
+      "n_gained_in_mistake": 2,
+      "top5_lost": [
+        {
+          "concept": "L20_F11405",
+          "influence": 0.002
+        },
+        {
+          "concept": "L23_F7923",
+          "influence": 0.0019
+        }
+      ],
+      "top5_gained": [
+        {
+          "concept": "L23_F10308",
+          "influence": 0.0024
+        },
+        {
+          "concept": "L6_F7725",
+          "influence": 0.0019
+        }
+      ],
+      "top5_shared": [
+        {
+          "concept": "L25_F5714",
+          "influence": 0.0369
+        },
+        {
+          "concept": "L22_F11133",
+          "influence": 0.0248
+        },
+        {
+          "concept": "L24_F15961",
+          "influence": 0.0195
+        },
+        {
+          "concept": "L18_F10940",
+          "influence": 0.0147
+        },
+        {
+          "concept": "L17_F8506",
+          "influence": 0.0103
+        }
+      ]
+    },
+    {
+      "item_id": "mmlu_logical_fallacies_0003_mistake",
+      "pano_div": 0.0691,
+      "n_shared": 62,
+      "n_lost_from_clean": 2,
+      "n_gained_in_mistake": 2,
+      "top5_lost": [
+        {
+          "concept": "L23_F4543",
+          "influence": 0.0024
+        },
+        {
+          "concept": "L19_F6369",
+          "influence": 0.0022
+        }
+      ],
+      "top5_gained": [
+        {
+          "concept": "L25_F13822",
+          "influence": 0.0019
+        },
+        {
+          "concept": "L25_F15920",
+          "influence": 0.0019
+        }
+      ],
+      "top5_shared": [
+        {
+          "concept": "L24_F12351",
+          "influence": 0.0317
+        },
+        {
+          "concept": "L22_F14263",
+          "influence": 0.0298
+        },
+        {
+          "concept": "L23_F3110",
+          "influence": 0.022
+        },
+        {
+          "concept": "L25_F15341",
+          "influence": 0.0197
+        },
+        {
+          "concept": "L18_F10940",
+          "influence": 0.0171
+        }
+      ]
+    },
+    {
+      "item_id": "mmlu_high_school_mathematics_0026_mistake",
+      "pano_div": 0.0522,
+      "n_shared": 63,
+      "n_lost_from_clean": 1,
+      "n_gained_in_mistake": 1,
+      "top5_lost": [
+        {
+          "concept": "L25_F13822",
+          "influence": 0.0019
+        }
+      ],
+      "top5_gained": [
+        {
+          "concept": "L23_F8182",
+          "influence": 0.0021
+        }
+      ],
+      "top5_shared": [
+        {
+          "concept": "L24_F12351",
+          "influence": 0.0448
+        },
+        {
+          "concept": "L22_F14263",
+          "influence": 0.0356
+        },
+        {
+          "concept": "L25_F15341",
+          "influence": 0.0249
+        },
+        {
+          "concept": "L23_F3110",
+          "influence": 0.0176
+        },
+        {
+          "concept": "L18_F10940",
+          "influence": 0.016
+        }
+      ]
+    }
+  ],
+  "k": 64,
+  "n_examples_requested": 3
+}

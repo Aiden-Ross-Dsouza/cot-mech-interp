@@ -1,0 +1,91 @@
+{
+  "H2_new_monotonicity": {
+    "rho": 0.027580512761036974,
+    "p": 0.7436811049822571,
+    "ci_lo": -0.1290250856869746,
+    "ci_hi": 0.1917308307506951,
+    "n": 143,
+    "threshold": 0.3,
+    "passed": false,
+    "frac_items_positive_tau": 0.26573426573426573,
+    "mean_tau": -0.29603729603729606,
+    "n_trunc_points_dist": {
+      "3": 131,
+      "6": 12
+    }
+  },
+  "H3_new_headtohead": {
+    "pano_spearman": {
+      "rho": 0.44377427199203445,
+      "p": 2.835852505314587e-08,
+      "ci_lo": 0.288130630396392,
+      "ci_hi": 0.5627879992867125,
+      "n": 143
+    },
+    "baseline_comparisons": {
+      "edit_norm": {
+        "rho_pano": 0.44377427199203445,
+        "rho_baseline": 0.1145451725192102,
+        "diff": 0.32922909947282425,
+        "ci_lo": 0.07968026132048991,
+        "ci_hi": 0.5778517996792515,
+        "ci_excludes_zero": true,
+        "n": 143,
+        "baseline_label": "Normalised edit distance"
+      },
+      "len_diff": {
+        "rho_pano": 0.44377427199203445,
+        "rho_baseline": 0.10763058482711468,
+        "diff": 0.33614368716491977,
+        "ci_lo": 0.09068570387058549,
+        "ci_hi": 0.5606011958950754,
+        "ci_excludes_zero": true,
+        "n": 143,
+        "baseline_label": "CoT length difference (tokens)"
+      }
+    },
+    "n_baselines_beaten": 2,
+    "n_baselines_total": 2,
+    "summary": "PANO_div strictly outperforms 2/2 baselines (CI excludes zero)"
+  },
+  "cross_dataset_h1": {
+    "BBH": {
+      "rho": 0.4191078008324208,
+      "p": 0.00014839800183611478,
+      "ci_lo": 0.15861214982420008,
+      "ci_hi": 0.6032094483624844,
+      "n": 77
+    },
+    "MMLU": {
+      "rho": 0.48899485940832715,
+      "p": 3.0982596425794585e-05,
+      "ci_lo": 0.314593191331326,
+      "ci_hi": 0.6422614281153958,
+      "n": 66
+    },
+    "summary": {
+      "all_datasets_positive_rho": true,
+      "datasets_with_n_ge_10": [
+        "BBH",
+        "MMLU"
+      ]
+    }
+  },
+  "holm_bonferroni": {
+    "test_names": [
+      "H2_new_monotonicity"
+    ],
+    "raw_p": [
+      0.7436811049822571
+    ],
+    "corrected_p": [
+      0.7436811049822571
+    ],
+    "rejected": [
+      false
+    ],
+    "order": [
+      0
+    ]
+  }
+}

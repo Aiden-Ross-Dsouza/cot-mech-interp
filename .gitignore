@@ -61,5 +61,30 @@ logs/
 # analysis/figures/*.pdf
 # analysis/figures/*.svg
 
-AGD_Project_Handoff_Document.md
-repomix-output-Aiden-Ross-Dsouza-cot-mech-interp.git (1).md
+# ── Claude Code ───────────────────────────────────────────────────────────────
+.claude/
+
+# ── LaTeX ─────────────────────────────────────────────────────────────────────
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+*.pdf
+!paper/main.pdf
+!example_paper.pdf
+
+# ── Template & Examples ───────────────────────────────────────────────────────
+Template/
+example_paper.*
+icml_numpapers.pdf
+paper/example_paper.pdf
+paper/Neel-Nanda-blog.txt
+
+# ── Project artifacts (don't ignore these if you want them in the repo) ──────
+# AGD_Project_Handoff_Document.md
+# repomix-output-Aiden-Ross-Dsouza-cot-mech-interp.git (1).md

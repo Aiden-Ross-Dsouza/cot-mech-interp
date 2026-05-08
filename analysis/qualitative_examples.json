@@ -1,0 +1,314 @@
+{
+  "high_grace_high_aoc": [
+    {
+      "item_id": "bbh_logical_deduction_three_objects_0016_trunc50",
+      "base_item_id": "bbh_logical_deduction_three_objects_0016",
+      "question_snippet": "Question: The following paragraphs each describe a set of three objects arranged in a fixed order. The statements are lo",
+      "grace_div": 0.9354,
+      "aoc_composite": 0.4,
+      "condition": "truncate_50",
+      "top_gained": [
+        {
+          "concept": "L24_F6157",
+          "influence": 0.00021
+        },
+        {
+          "concept": "L23_F10308",
+          "influence": 0.00014
+        },
+        {
+          "concept": "L24_F5898",
+          "influence": 0.0001
+        },
+        {
+          "concept": "L21_F12103",
+          "influence": 8e-05
+        },
+        {
+          "concept": "L23_F4173",
+          "influence": 7e-05
+        }
+      ],
+      "top_lost": [
+        {
+          "concept": "L25_F5714",
+          "influence": 0.00916
+        },
+        {
+          "concept": "L24_F15961",
+          "influence": 0.00392
+        },
+        {
+          "concept": "L24_F6647",
+          "influence": 0.00167
+        },
+        {
+          "concept": "L22_F13976",
+          "influence": 0.00097
+        },
+        {
+          "concept": "L23_F5633",
+          "influence": 0.00096
+        }
+      ],
+      "top_shared": [
+        {
+          "concept": "L22_F11133",
+          "influence": 0.01449
+        },
+        {
+          "concept": "L18_F10940",
+          "influence": 0.00824
+        },
+        {
+          "concept": "L24_F13541",
+          "influence": 0.00374
+        },
+        {
+          "concept": "L19_F10674",
+          "influence": 0.00368
+        },
+        {
+          "concept": "L23_F4543",
+          "influence": 0.00309
+        }
+      ],
+      "n_gained": 16,
+      "n_lost": 16,
+      "n_shared": 48
+    },
+    {
+      "item_id": "mmlu_high_school_physics_0021_trunc50",
+      "base_item_id": "mmlu_high_school_physics_0021",
+      "question_snippet": "Question: An ideal battery of constant voltage V supplies current to a circuit that has total resistance R. If R is doub",
+      "grace_div": 0.9438,
+      "aoc_composite": 0.6,
+      "condition": "truncate_50",
+      "top_gained": [
+        {
+          "concept": "L24_F15961",
+          "influence": 0.00038
+        },
+        {
+          "concept": "L24_F6647",
+          "influence": 0.00022
+        },
+        {
+          "concept": "L22_F4339",
+          "influence": 0.00018
+        },
+        {
+          "concept": "L23_F15699",
+          "influence": 0.00014
+        },
+        {
+          "concept": "L15_F7576",
+          "influence": 0.00011
+        }
+      ],
+      "top_lost": [
+        {
+          "concept": "L24_F6157",
+          "influence": 0.00701
+        },
+        {
+          "concept": "L22_F3640",
+          "influence": 0.00678
+        },
+        {
+          "concept": "L24_F8796",
+          "influence": 0.0042
+        },
+        {
+          "concept": "L20_F6455",
+          "influence": 0.00355
+        },
+        {
+          "concept": "L14_F2043",
+          "influence": 0.00261
+        }
+      ],
+      "top_shared": [
+        {
+          "concept": "L22_F11133",
+          "influence": 0.01971
+        },
+        {
+          "concept": "L21_F2035",
+          "influence": 0.01712
+        },
+        {
+          "concept": "L18_F10940",
+          "influence": 0.00923
+        },
+        {
+          "concept": "L25_F16057",
+          "influence": 0.00865
+        },
+        {
+          "concept": "L23_F4543",
+          "influence": 0.00445
+        }
+      ],
+      "n_gained": 23,
+      "n_lost": 23,
+      "n_shared": 41
+    }
+  ],
+  "low_grace_low_aoc": [
+    {
+      "item_id": "mmlu_logical_fallacies_0016_trunc50",
+      "base_item_id": "mmlu_logical_fallacies_0016",
+      "question_snippet": "Question: _Ad populum_. is another name for which fallacy? (A) poisoning the well (B) suppressed evidence (C) appeal to ",
+      "grace_div": 0.1455,
+      "aoc_composite": 0.2,
+      "condition": "truncate_50",
+      "top_gained": [
+        {
+          "concept": "L21_F7073",
+          "influence": 0.00247
+        },
+        {
+          "concept": "L2_F7229",
+          "influence": 0.00241
+        },
+        {
+          "concept": "L17_F1473",
+          "influence": 0.00218
+        },
+        {
+          "concept": "L1_F11946",
+          "influence": 0.00216
+        },
+        {
+          "concept": "L8_F1279",
+          "influence": 0.00214
+        }
+      ],
+      "top_lost": [
+        {
+          "concept": "L19_F10544",
+          "influence": 0.00238
+        },
+        {
+          "concept": "L9_F9263",
+          "influence": 0.0022
+        },
+        {
+          "concept": "L25_F15920",
+          "influence": 0.00215
+        },
+        {
+          "concept": "L19_F9893",
+          "influence": 0.00212
+        },
+        {
+          "concept": "L20_F11405",
+          "influence": 0.00208
+        }
+      ],
+      "top_shared": [
+        {
+          "concept": "L24_F12351",
+          "influence": 0.03803
+        },
+        {
+          "concept": "L22_F14263",
+          "influence": 0.03167
+        },
+        {
+          "concept": "L23_F3110",
+          "influence": 0.02473
+        },
+        {
+          "concept": "L25_F15341",
+          "influence": 0.02456
+        },
+        {
+          "concept": "L21_F13715",
+          "influence": 0.0223
+        }
+      ],
+      "n_gained": 5,
+      "n_lost": 5,
+      "n_shared": 59
+    },
+    {
+      "item_id": "mmlu_logical_fallacies_0019_trunc50",
+      "base_item_id": "mmlu_logical_fallacies_0019",
+      "question_snippet": "Question: _Ad hominem_ is another name for the fallacy of (A) appeal to loyalty (B) reducing to an absurdity (C) ignoran",
+      "grace_div": 0.15,
+      "aoc_composite": 0.2,
+      "condition": "truncate_50",
+      "top_gained": [
+        {
+          "concept": "L20_F4126",
+          "influence": 0.00301
+        },
+        {
+          "concept": "L24_F2813",
+          "influence": 0.00271
+        },
+        {
+          "concept": "L21_F7073",
+          "influence": 0.00249
+        },
+        {
+          "concept": "L20_F15208",
+          "influence": 0.00245
+        },
+        {
+          "concept": "L18_F3321",
+          "influence": 0.00244
+        }
+      ],
+      "top_lost": [
+        {
+          "concept": "L21_F7740",
+          "influence": 0.00316
+        },
+        {
+          "concept": "L20_F7740",
+          "influence": 0.00291
+        },
+        {
+          "concept": "L9_F9263",
+          "influence": 0.00239
+        },
+        {
+          "concept": "L18_F2441",
+          "influence": 0.00238
+        },
+        {
+          "concept": "L25_F15920",
+          "influence": 0.00223
+        }
+      ],
+      "top_shared": [
+        {
+          "concept": "L24_F12351",
+          "influence": 0.03718
+        },
+        {
+          "concept": "L22_F14263",
+          "influence": 0.0354
+        },
+        {
+          "concept": "L23_F3110",
+          "influence": 0.02483
+        },
+        {
+          "concept": "L21_F13715",
+          "influence": 0.02134
+        },
+        {
+          "concept": "L25_F15341",
+          "influence": 0.02
+        }
+      ],
+      "n_gained": 7,
+      "n_lost": 7,
+      "n_shared": 57
+    }
+  ]
+}
