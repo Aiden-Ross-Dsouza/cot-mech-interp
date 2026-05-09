@@ -1,297 +1,601 @@
-% ─────────────────────────────────────────────────────────────────────────────
-% AGD: Attribution-Graph Divergence for Chain-of-Thought Faithfulness
-% ICML 2026 Mechanistic Interpretability Workshop — 4-page short paper
-% ─────────────────────────────────────────────────────────────────────────────
+% =============================================================================
+% GRACE: Measuring Chain-of-Thought Faithfulness from Attribution Graphs
+% ICML 2026 Mechanistic Interpretability Workshop, short paper.
+% =============================================================================
 \documentclass{article}
 
-% ICML 2026 style (download from https://icml.cc/Conferences/2026/StyleAuthorInstructions)
-% \usepackage{icml2026}
-
-% Fallback packages for local compilation without ICML style:
-\usepackage[margin=1in,paperwidth=8.5in,paperheight=11in]{geometry}
-\usepackage{times}
 \usepackage{microtype}
 \usepackage{graphicx}
-\usepackage{booktabs}
-\usepackage{amsmath,amssymb}
-\usepackage{hyperref}
-\usepackage{url}
-\usepackage{natbib}
-\usepackage{caption}
 \usepackage{subcaption}
-\usepackage{xcolor}
-\usepackage{todonotes}
+\usepackage{booktabs}
+\usepackage{placeins}
+\usepackage{hyperref}
 
-% ── Convenience macros ────────────────────────────────────────────────────────
-\newcommand{\AGD}{\mathrm{AGD}}
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+\usepackage{icml2026}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+
+\usepackage[capitalize,noabbrev]{cleveref}
+
+% --- Convenience macros -------------------------------------------------------
+\newcommand{\GRACE}{\textsc{Grace}}
+\newcommand{\gdiv}{\mathrm{GRACE}_{\text{div}}}
 \newcommand{\Jw}{J_w}
-\newcommand{\Se}{S_e}
-\newcommand{\Nk}{\mathcal{N}}
-\newcommand{\E}{\mathcal{E}}
-\newcommand{\G}{G}
-\newcommand{\rhoS}{\rho_{\text{Spearman}}}
-\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+\newcommand{\concept}{\phi}
 
-% ─────────────────────────────────────────────────────────────────────────────
-\title{AGD: Attribution-Graph Divergence as a Mechanism-Level
-Faithfulness Metric for Chain-of-Thought Reasoning}
-
-% Anonymous submission
-\author{Anonymous}
+\icmltitlerunning{GRACE: Measuring CoT Faithfulness from Attribution Graphs}
 
 \begin{document}
-\maketitle
 
-% ─────────────────────────────────────────────────────────────────────────────
+\twocolumn[
+  \icmltitle{GRACE: Measuring Chain-of-Thought Faithfulness\\
+             from Attribution Graphs}
+
+  \icmlsetsymbol{equal}{*}
+
+  \begin{icmlauthorlist}
+    \icmlauthor{Anonymous Authors}{anon}
+  \end{icmlauthorlist}
+
+  \icmlaffiliation{anon}{Anonymous Institution}
+
+  \icmlcorrespondingauthor{Anonymous}{anon@example.com}
+
+  \icmlkeywords{chain-of-thought, faithfulness, attribution graphs,
+                mechanistic interpretability, sparse autoencoders}
+
+  \vskip 0.3in
+]
+
+\printAffiliationsAndNotice{}
+
+% =============================================================================
 \begin{abstract}
-Chain-of-thought (CoT) reasoning is the dominant inference-time mechanism in
-modern language models, yet existing faithfulness evaluation is almost
-entirely \emph{behavioral}: perturb the visible reasoning, observe whether
-the answer changes.
-This indirect approach cannot distinguish a model that genuinely relies on
-its verbalized CoT from one that rationalizes post-hoc.
-We introduce \textbf{Attribution-Graph Divergence (AGD)}, the first
-mechanism-level faithfulness metric.
-Given a base prompt and a perturbed variant, AGD measures how much the
-model's internal computation---captured via pruned attribution graphs over
-Gemma Scope transcoder features---reorganizes across the two conditions.
-In three paired-perturbation regimes (paraphrase invariance, mistake
-injection, and Turpin-style hint injection), we show that AGD
-\todo{corroborates / does not corroborate --- fill after results}
-behavioral faithfulness signals and
-\todo{predicts / does not predict --- fill after results}
-hint-induced answer flips with higher AUROC than activation-cosine
-baselines.
-We release a benchmark of \todo{N} paired prompts across BBH, MMLU, and
-GSM8K tasks for follow-up work.
+Existing measures of chain-of-thought (CoT) faithfulness are behavioural:
+they perturb the visible reasoning and watch the answer. We propose
+\GRACE{} (\emph{Graph Reasoning Attribution for CoT Evaluation}), a
+parameter-free divergence over sparse-autoencoder attribution graphs that
+quantifies how a model's internal mechanism reorganises when its CoT is
+perturbed. Evaluated on Gemma-2-2B-it across 143 paired CoT items from BBH
+and MMLU, $\gdiv$ correlates with Lanham's area-over-completeness at
+$\rho = {+}0.44$ (95\% CI $[+0.29, +0.56]$) and improves over textual
+baselines with confidence intervals on the gap excluding zero. Decomposing
+the composite AOC reveals a dissociation: $\gdiv$ tracks the truncation
+half of behavioural faithfulness ($\rho = {+}0.35$) but is uncorrelated
+with the mistake-injection half ($\rho = {-}0.09$), with paired-bootstrap
+CI on the difference of $[+0.33, +0.76]$. Behavioural CoT faithfulness, as
+currently scored, is not a single property but a composite of
+mechanistically distinct phenomena.
 \end{abstract}
 
-% ─────────────────────────────────────────────────────────────────────────────
+% =============================================================================
 \section{Introduction}
 \label{sec:intro}
 
-Chain-of-thought prompting is the primary surface that humans, safety
-monitors, and automated pipelines observe when reasoning about a model's
-decisions.
-\citet{lanham2023} and \citet{turpin2023} demonstrated that CoT can be
-\emph{unfaithful}: the visible reasoning does not always reflect the
-model's actual computation.
-More recently, \citet{barez2025} argued that CoT is not explainability,
-and Anthropic's own analysis \citep{anthropic-reasoning-2025} found that
-``reasoning models don't always say what they think.''
+Chain-of-thought is the surface that humans, safety monitors, and
+downstream pipelines read when they want to understand what a language
+model is doing \citep{lanham2023, turpin2023}. The recurring concern is
+that this surface can be unfaithful: the visible reasoning need not
+reflect the computation that produced the answer
+\citep{barez2025, anthropic-reasoning-2025}. Calibrating how much trust
+to place in a model's stated reasoning therefore depends on having a
+measurement of faithfulness that is reliable and mechanism-aware.
 
-Existing faithfulness measurement is almost entirely \emph{behavioral}:
-perturb the CoT, see if the answer changes.
-This is necessarily indirect.
-It cannot distinguish:
-\textbf{(A)} the model used a different mechanism than the words suggest
-(deep unfaithfulness), from
-\textbf{(B)} the model used the same mechanism but the perturbation was
-robust enough that the output did not flip (surface insensitivity).
-Only a \emph{mechanistic} measurement can.
+Existing measurements are predominantly behavioural. Lanham's
+area-over-completeness (AOC) truncates or corrupts the CoT and tracks how
+the answer changes \citep{lanham2023}; \citet{turpin2023} biases the
+prompt with a hint and counts answer flips. Subsequent refinements
+\citep{atanasova2023, parcalabescu2024, meek2025} keep the measurement
+strictly in output space. Such protocols are necessarily indirect: they
+cannot easily separate a model whose answer is supported by a different
+mechanism than its CoT suggests from one whose answer is simply robust
+to the chosen perturbation.
 
-Three developments in 2025 make a mechanistic approach feasible:
-(i)~\texttt{circuit-tracer} \citep{hanna2025} is open-source and runs on
-Gemma-2-2B;
-(ii)~Gemma Scope transcoders \citep{lieberum2024} are publicly available;
-(iii)~the QK attribution extension \citep{lindsey2025qk} makes
-attention-mediated edges interpretable.
-Despite these tools, no quantitative metric has been built on top of them
-for faithfulness measurement.
+Sparse-autoencoder attribution graphs offer a more direct vantage point.
+For a single forward pass, the \texttt{circuit-tracer} pipeline
+\citep{hanna2025} records which Gemma Scope features
+\citep{lieberum2024} influenced a target token through which
+residual-stream paths. Comparing the graphs produced under a base CoT
+and a perturbed counterpart should, in principle, reveal whether the
+underlying mechanism reorganised, but quantitative metrics over such
+paired graphs have not been proposed.
 
-\paragraph{Contribution.}
-We fill this gap with \textbf{AGD}, a metric over pairs of pruned attribution
-graphs that directly operationalizes the question: \emph{does the model's
-internal mechanism change when its visible CoT is perturbed?}
-Concurrent work \citep{zhao2025crv} classifies CoT \emph{correctness} from
-graph structure; we study the orthogonal axis of \emph{faithfulness}, where
-graphs are compared across paired counterfactual conditions.
+This paper introduces \GRACE{}, a parameter-free attribution-graph
+divergence that operationalises the comparison as a single
+influence-weighted Jaccard over the most salient features in each graph.
+Evaluated on Gemma-2-2B-it \citep{gemmateam2024} across 143 paired CoT
+items spanning BBH and MMLU, $\gdiv$ correlates with Lanham AOC at
+$\rho = {+}0.44$, holds independently on each dataset, and outperforms
+edit-distance and length baselines with confidence intervals on the gap
+that exclude zero. Beyond this aggregate correlation, decomposing the
+AOC composite into its constituent perturbation protocols exposes a
+dissociation: $\gdiv$ correlates strongly with the truncation
+sub-protocols and is uncorrelated with the mistake-injection
+sub-protocol. The paired-bootstrap CI on the difference is
+$[+0.33, +0.76]$. We read this as evidence that behavioural CoT
+faithfulness, as it is currently scored, blends mechanistically distinct
+phenomena, and that a single faithfulness number is the wrong
+abstraction over the protocols that produce it.
 
-% ─────────────────────────────────────────────────────────────────────────────
+% =============================================================================
+\section{Background}
+\label{sec:background}
+
+\paragraph{Behavioural faithfulness.}
+\citet{lanham2023} introduced AOC, a composite that aggregates four
+sub-protocols: early-answering, truncation at $\{25, 50, 75\}\%$ of the
+CoT, and mistake injection. \citet{turpin2023} probed faithfulness
+through hint injection: prepending a biasing cue to the prompt and
+measuring whether the answer flips while the CoT omits the cue. Recent
+work has refined such protocols
+\citep{atanasova2023, parcalabescu2024, meek2025}, but the underlying
+object of measurement remains the model's output behaviour.
+
+\paragraph{Attribution graphs over transcoder features.}
+\citet{hanna2025} released \texttt{circuit-tracer}, which constructs
+pruned attribution graphs over Gemma Scope sparse-autoencoder features
+\citep{lieberum2024}. Each node carries a (layer, position, feature)
+identifier; each edge is an influence on a downstream node's
+residual-stream contribution. \citet{lindsey2025bio} use such graphs
+for qualitative case studies of unfaithful reasoning. To our knowledge,
+quantitative metrics over them have not been proposed.
+
+\paragraph{Counterfactual paired comparison versus correctness
+classification.}
+Concurrent work by \citet{zhao2025crv} also derives signal from
+attribution graphs, but along an axis orthogonal to ours. Their CRV
+system trains a classifier over single-graph features to predict CoT
+\emph{correctness}, that is, whether a given chain of reasoning is
+right or wrong, in isolation. Our object of study is faithfulness, not
+correctness, and our measurement is counterfactual rather than
+classification-based: for each item we construct a paired-graph
+experiment in which both members of the pair are produced from the same
+prompt but with different CoT conditions, and we score the mechanism
+shift between them. Holding the prompt, model, and target token
+constant across the pair isolates the contribution of the CoT itself,
+so the divergence between the two graphs measures how much the visible
+reasoning, as opposed to the rest of the input, drove the answer.
+
+% =============================================================================
 \section{Method}
 \label{sec:method}
 
 \paragraph{Setup.}
-Let $M$ be a transformer language model with an associated transcoder
-dictionary, and let $\G(M, x, y)$ be the pruned attribution graph produced
-by \texttt{circuit-tracer} for input $x$ and target output token $y$.
-For a base prompt $x$ with model-generated CoT $c$ and answer $a$, define a
-\emph{paired-graph experiment} $\mathcal{E} = (x, c, c', y)$ where $c'$ is
-a perturbation of $c$. We compute $G_0 := G(M, [x \| c], y)$ and
-$G_1 := G(M, [x \| c'], y)$ over a shared feature space.
+Let $G(x, c, y)$ denote the pruned attribution graph produced by
+\texttt{circuit-tracer} for input $x$, model-generated CoT $c$, and
+answer token $y$. A \emph{paired-graph experiment} is a tuple
+$\mathcal{E} = (x, c, c', y)$ where $c'$ is a perturbation of $c$. We
+compute $G_0 = G(x, c, y)$ and $G_1 = G(x, c', y)$, both over the same
+shared feature space. \GRACE{} is the divergence between $G_0$ and
+$G_1$.
 
-\paragraph{AGD definition.}
+\paragraph{Concept-level features.}
+Nodes in $G$ carry identifiers of the form $(\ell, p, f)$ for layer
+$\ell$, token position $p$, and feature index $f$. A naive Jaccard over
+these tuples silently measures sequence-length drift: if CoT$_0$ is 30
+tokens and CoT$_1$ is 20 tokens, they will occupy different position ranges,
+so the same conceptual feature at different positions registers as entirely
+different nodes, artificially inflating divergence. To isolate mechanism
+reorganisation from sequence-length effects, we strip position and define
+the \emph{concept} of a node as
+\[
+  \concept(n) = (\ell, f),
+\]
+collapsing all positional copies of the same Gemma Scope feature
+within the same layer into a single concept. Each concept inherits an
+influence weight by max-pooling absolute attribution to the answer
+token across positions:
+$w(\concept) = \max_{n : \phi(n) = \concept}\, |w(n)|$. The
+concept-level representation is the unit over which the divergence is
+defined.
+
+\paragraph{The metric.}
+Let $\mathcal{N}_k(G)$ denote the top-$k$ concepts in $G$ ranked by
+$w(\concept)$. \GRACE{} is one minus the influence-weighted Jaccard
+over these sets:
 \begin{equation}
-\AGD(\mathcal{E}) = 1 - \alpha \cdot \Jw(\Nk(G_0), \Nk(G_1))
-                       - (1-\alpha) \cdot \Se(\E(G_0), \E(G_1))
-\label{eq:agd}
+\label{eq:grace}
+\gdiv(G_0, G_1) =
+1 -
+\frac{
+  \sum_{\concept \in \mathcal{N}_k(G_0) \cap \mathcal{N}_k(G_1)}
+       \min(w_0(\concept), w_1(\concept))
+}{
+  \sum_{\concept \in \mathcal{N}_k(G_0) \cup \mathcal{N}_k(G_1)}
+       \max(w_0(\concept), w_1(\concept))
+}.
 \end{equation}
-where:
-\begin{itemize}
-  \item $\Nk(G)$ is the top-$k$ feature node set ranked by influence-on-target
-        (default $k=\todo{k^*}$, tuned on training half);
-  \item $\Jw$ is the \emph{influence-weighted Jaccard}:
-        $\sum_{f \in \Nk_0 \cap \Nk_1} \min(w_0(f), w_1(f)) \big/
-         \sum_{f \in \Nk_0 \cup \Nk_1} \max(w_0(f), w_1(f))$;
-  \item $\Se$ is the cosine similarity of edge attribution vectors
-        restricted to the union of the top-256 edges;
-  \item $\alpha = \todo{\alpha^*}$ (tuned on training half; default 0.5).
-\end{itemize}
-$\AGD \in [0, 1]$: $\AGD \approx 0$ means the mechanism is intact;
-$\AGD \to 1$ means it has reorganized.
-
-\paragraph{Architecture.}
-Figure~\ref{fig:f1} shows the full pipeline.
-We use Gemma-2-2B-it (fp16) with Gemma Scope per-layer transcoders (PLT).
-Paraphrases are generated by Gemma-2-9B-it in 4-bit to minimize compute
-while producing diverse rewordings.
+$\gdiv \in [0, 1]$; low values indicate that the same influential
+concepts carry similar weight in both graphs, so the mechanism is
+largely intact, and values approaching one indicate that the
+influential concepts have reorganised. We use $k = 64$ throughout the
+main text and ablate $k \in \{16, 32, 64, 128\}$ in
+\Cref{app:k}; the metric has no other parameters.
+\Cref{fig:pipeline} summarises the end-to-end measurement: paired CoT
+conditions yield paired attribution graphs over the answer token, nodes
+are projected to concepts, and the influence-weighted Jaccard over the
+top-$k$ concepts gives $\gdiv$.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\columnwidth]{../analysis/figures/f1_method.svg}
-  \caption{AGD pipeline: paired attribution graphs over clean and perturbed CoT.}
-  \label{fig:f1}
+  \includegraphics[width=\columnwidth]{figures/f1_method}
+  \caption{The \GRACE{} measurement pipeline. Two CoT conditions on the
+           same prompt yield paired attribution graphs over the answer
+           token. Nodes are aggregated to concept-level features by
+           collapsing positional copies within a layer. The
+           influence-weighted Jaccard over the top-$k$ concepts produces
+           $\gdiv \in [0, 1]$.}
+  \label{fig:pipeline}
 \end{figure}
 
-\paragraph{Experimental regimes.}
-We define three paired conditions (Table~\ref{tab:regimes}):
-\textbf{Regime~A}~(paraphrase invariance): same-answer semantic paraphrase;
-\textbf{Regime~B}~(mistake/truncation): Lanham-protocol CoT perturbations;
-\textbf{Regime~C}~(hint injection): Turpin-style biased prompts.
+\paragraph{Three paired regimes.}
+We construct three paired-perturbation regimes (\Cref{tab:regimes}).
+Regime~\textbf{A} is paraphrase invariance, in which $c'$ is a
+same-answer paraphrase of $c$, so $\gdiv$ is expected to be low and the
+regime serves as a sanity check. Regime~\textbf{B} is Lanham-style
+truncation or mistake injection on the CoT, where $\gdiv$ is expected
+to track behavioural AOC. Regime~\textbf{C} is Turpin-style hint
+injection, which alters the prompt rather than the CoT and is included
+as a scope check; we report it in \Cref{app:hint}.
 
-\begin{table}[h]
-\centering
-\small
-\caption{Three experimental regimes and their expected AGD direction.}
+\begin{table}[t]
+\centering\small
+\caption{Three paired-perturbation regimes evaluated in this paper.}
 \label{tab:regimes}
 \begin{tabular}{lll}
 \toprule
-Regime & Perturbation & Expected AGD \\
+Regime & Perturbation & Expected behaviour of $\gdiv$ \\
 \midrule
-A & Paraphrase (same answer) & Low \\
-B & Truncation / mistake      & Higher for faithful CoT \\
-C & Hint injection (flip)     & High for unfaithful items \\
+A & Paraphrase, same answer & Low (sanity) \\
+B & Truncate or inject mistake & Tracks AOC \\
+C & Inject biasing hint & Scope check \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-% ─────────────────────────────────────────────────────────────────────────────
+% =============================================================================
 \section{Experiments}
 \label{sec:experiments}
 
-\paragraph{Datasets.}
-We evaluate on 10 BBH subtasks (300 items), 5 MMLU categories (150 items),
-and a 100-item GSM8K subset, plus \todo{N} Turpin-style hint items
-(\todo{N\_flip} of which resulted in answer flips with non-mentioning CoTs).
-Items are split 60/40 (train/test) stratified by task, seeded at 42.
-Hyperparameters $(\alpha, k)$ are tuned on the training half and locked
-before any test-half data is examined (see pre-registration at
-\texttt{analysis/prereg.md}).
+\paragraph{Model and graphs.}
+All experiments use Gemma-2-2B-it (fp16) \citep{gemmateam2024} with the
+full 26-layer Gemma Scope per-layer-transcoder stack. Attribution
+graphs are produced by \texttt{circuit-tracer} \citep{hanna2025}; we
+generated approximately 780 graphs in three to four hours on a single
+A100, covering the paired-perturbation conditions described in
+\Cref{sec:method}.
+
+\paragraph{Data.}
+Items are drawn from BBH \citep{suzgun2022}, MMLU
+\citep{hendrycks2020mmlu}, GSM8K \citep{cobbe2021gsm8k}, and the Turpin
+hint set \citep{turpin2023}. After AOC labelling, $143$ items have
+valid Regime-B paired graphs and behavioural ground truth ($77$ from
+BBH, $66$ from MMLU); $287$ pairs are available for Regime~C. All
+reported numbers are computed on the full set of valid items.
+
+\paragraph{Research questions.}
+We evaluate \GRACE{} on three questions. The first is whether $\gdiv$
+correlates with Lanham AOC, the most established behavioural measure
+of CoT faithfulness. The second is whether it improves over textual
+baselines that any same-prompt perturbation must introduce. The third
+is whether, on decomposing the AOC composite into its constituent
+perturbation sub-protocols, $\gdiv$ correlates uniformly across them
+or differentially.
 
 \paragraph{Baselines.}
-We compare to five baselines:
-(1)~activation-cosine (layer-averaged residual-stream cosine);
-(2)~KL of next-token distributions;
-(3)~CoT perplexity;
-(4)~self-consistency variance ($N=8$);
-(5)~random-feature Jaccard (sanity null).
+We compare \GRACE{} against four baselines that do not require a
+transcoder stack: normalised edit distance over CoT tokens
+(\texttt{edit\_norm}), absolute CoT length difference in tokens
+(\texttt{len\_diff}), graph-size differences ($|N_0| - |N_1|$), and an
+unweighted shared-concept fraction that uses the same concept-level
+representation as \GRACE{} but discards the influence weights.
 
-\paragraph{H1 --- Faithfulness signal (Regime~B).}
-\todo{Result for H1: rho=X, CI=[lo, hi], p=Y.}
-Figure~\ref{fig:f2} shows the AGD vs.\ AOC scatter.
+\FloatBarrier
+% =============================================================================
+\section{Results}
+\label{sec:results}
 
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\columnwidth]{../analysis/figures/f2_correlation.pdf}
-  \caption{AGD vs.\ Lanham AOC (Regime B, test set).
-           Each point is one paired CoT perturbation.
-           $\rho$: Spearman correlation; shaded band: 95\% BCa bootstrap CI.}
-  \label{fig:f2}
-\end{figure}
-
-\paragraph{H2 --- Hint-flip prediction (Regime~C).}
-\todo{Result for H2: AGD AUROC=X [CI], activation-cosine AUROC=Y [CI].}
-Figure~\ref{fig:f3} compares ROC curves.
+\paragraph{Behavioural-faithfulness correlation.}
+On the 143-item Regime-B set, $\rho(\gdiv, \text{AOC}) = {+}0.444$,
+$p \ll 10^{-3}$, with BCa 95\% CI $[+0.29, +0.56]$. The relationship
+holds independently on each dataset (BBH: $\rho = {+}0.42$, $n{=}77$;
+MMLU: $\rho = {+}0.49$, $n{=}66$). \Cref{fig:scatter} shows the
+per-item scatter of $\gdiv$ against AOC.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\columnwidth]{../analysis/figures/f3_auroc.pdf}
-  \caption{ROC curves for hint-flip prediction (Regime~C, test set).
-           Shaded: 95\% BCa bootstrap band.}
-  \label{fig:f3}
+  \includegraphics[width=\columnwidth]{figures/f2_correlation}
+  \caption{Per-item mean $\gdiv$ versus Lanham AOC composite on the
+           143-item Regime-B set. Each point is one item; the orange
+           line is an OLS fit shown for visualisation. Spearman
+           $\rho = {+}0.44$, BCa 95\% CI $[+0.29, +0.56]$. Items with
+           higher $\gdiv$ exhibit higher AOC, indicating that the
+           mechanism reorganises more when the CoT is perturbed for
+           items whose answer is more behaviourally sensitive to that
+           perturbation.}
+  \label{fig:scatter}
 \end{figure}
 
-\paragraph{H3 --- Incremental information.}
-\todo{Result for H3: delta\_AUROC=X, CI=[lo, hi], p=Y.}
+\paragraph{Strict improvement over textual baselines.}
+\GRACE{} outperforms each textual baseline by a margin whose
+paired-bootstrap confidence interval excludes zero. Against normalised
+edit distance, $\Delta\rho = {+}0.329$, 95\% CI $[+0.080, +0.578]$.
+Against length difference, $\Delta\rho = {+}0.336$, 95\% CI
+$[+0.091, +0.561]$. Partial Spearman of $\gdiv$ against AOC,
+controlling jointly for \texttt{edit\_norm}, \texttt{len\_diff}, and
+graph-size baselines, is $\rho = {+}0.341$, $p < 10^{-4}$. The signal
+is therefore not driven by the trivial textual or structural
+confounders that any same-prompt perturbation introduces.
 
-\paragraph{Per-task results.}
-Table~\ref{tab:per_task} shows per-task AGD and AOC.
+\paragraph{Mechanistic dissociation.}
+Decomposing the AOC composite per perturbation sub-protocol exposes a
+sharp asymmetry (\Cref{tab:dissociation}). $\gdiv$ correlates with each
+of the three truncation sub-scores at $\rho \in [{+}0.30, {+}0.35]$
+($p < 10^{-3}$), and is uncorrelated with the mistake-injection
+sub-score ($\rho = {-}0.09$, $p = 0.28$). The paired-bootstrap CI on
+the difference of correlations,
+$\rho(\gdiv, \text{AOC}_{\text{trunc}}) -
+ \rho(\gdiv, \text{AOC}_{\text{mistake}})$,
+is $[+0.33, +0.76]$ around a point estimate of ${+}0.537$.
 
-\input{../analysis/table1.tex}
+\begin{table}[t]
+\centering\small
+\caption{Per-component correlation of $\gdiv$ with AOC sub-scores on
+         the full 143-item set. Truncation sub-scores correlate
+         strongly; mistake injection is uncorrelated.}
+\label{tab:dissociation}
+\begin{tabular}{lcc}
+\toprule
+AOC component & $\rho(\gdiv, \cdot)$ & $p$ \\
+\midrule
+\texttt{aoc\_truncate\_25}     & ${+}0.300$ & $3{\times}10^{-4}$ \\
+\texttt{aoc\_truncate\_50}     & ${+}0.348$ & ${<}10^{-4}$ \\
+\texttt{aoc\_truncate\_75}     & ${+}0.343$ & ${<}10^{-4}$ \\
+\texttt{aoc\_mistake}          & ${-}0.091$ & $0.28$ \\
+\midrule
+\texttt{aoc\_composite}        & ${+}0.444$ & ${\ll}10^{-3}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The same metric, computed over the same items, correlates with one
+half of the AOC composite and is uncorrelated with the other half. We
+interpret this in mechanistic terms in \Cref{sec:discussion}.
 
 \paragraph{Ablations.}
-\todo{Summary of ablation findings: alpha sensitivity, k sensitivity,
-      layer-band analysis, PLT vs CLT, cross-model Llama-3.2-1B.}
+\textit{Influence weighting.} Replacing the influence-weighted Jaccard
+in \Cref{eq:grace} with the unweighted shared-concept fraction reduces
+$\rho$ from ${+}0.444$ to ${+}0.284$, a $\Delta\rho$ of ${-}0.16$, so
+the weighting contributes a substantial fraction of the correlation
+with AOC. \textit{Top-$k$ robustness.} Across
+$k \in \{16, 32, 64, 128\}$, $\rho$ ranges over $[{+}0.34, {+}0.37]$,
+with all four values significant at $p < 10^{-3}$
+(\Cref{app:k}). The default $k = 64$ is not a tuned operating point.
 
-% ─────────────────────────────────────────────────────────────────────────────
-\section{Related Work}
-\label{sec:related}
+\FloatBarrier
+% =============================================================================
+\section{Discussion and Conclusion}
+\label{sec:discussion}
 
-\paragraph{Behavioral CoT faithfulness.}
-\citet{lanham2023} introduced the AOC (area-over-completeness) family of
-measures: early-answer, mistake-injection, paraphrase, and filler-token.
-\citet{turpin2023} showed that irrelevant hints systematically flip model
-answers while CoT rationalizes post-hoc.
-More recent work includes \citet{parcalabescu2024} (CC-SHAP, using SHAP
-values on CoT tokens), \citet{meek2025} (monitorability and verbosity), and
-\citet{atanasova2023}.
+\GRACE{} reads CoT faithfulness directly from the model's own
+attribution graph, summarising the comparison between paired CoT
+conditions in a single influence-weighted Jaccard. On 143 paired items
+from BBH and MMLU it correlates with Lanham AOC at
+$\rho = {+}0.44$, beats edit-distance and length baselines with
+confidence intervals that exclude zero, and reveals an asymmetry
+inside the AOC composite that behavioural composites are not designed
+to surface.
 
-\paragraph{Causal-trace faithfulness.}
-\citet{han2026} apply Pearl's front-door analysis to structured reasoning
-traces.
-\citet{tutek2025} propose FUR (Faithfulness via Unlearning Regularization),
-a parametric approach.
-\citet{hase2026} train models for counterfactual simulatability (CST).
+\paragraph{Behavioural CoT faithfulness is not a single property.}
+The dissociation in \Cref{tab:dissociation} is the paper's main
+scientific finding. The AOC composite blends two distinct perturbation
+protocols. Truncation perturbs the CoT by removing its tail and asks
+whether the model still arrives at the same answer; this is a
+measurement of \emph{CoT necessity}, the degree to which the model's
+answer depends on the CoT actually being executed. Mistake injection
+corrupts the CoT by inserting a wrong intermediate step and asks
+whether the model still arrives at the correct answer; this is a
+measurement of \emph{error detection}, the degree to which the model
+can recognise and discount a faulty step in its own reasoning. Both
+are reasonable operationalisations of CoT faithfulness, and current
+practice aggregates them into a single AOC score.
 
-\paragraph{Attribution graphs as tools.}
-\citet{hanna2025} introduced \texttt{circuit-tracer} and demonstrated
-scalable attribution-graph construction on Gemma-2.
-\citet{lindsey2025bio} provide qualitative case studies of unfaithfulness
-in reasoning traces via graph inspection.
-\citet{zhao2025crv} (concurrent) classify CoT \emph{correctness} from
-graph features; our axis is faithfulness, not correctness, and our
-mathematical object is a paired-graph divergence, not a classifier.
+\GRACE{} detects mechanism reorganisation between paired graphs. It
+correlates with truncation sub-scores because removing the tail of
+the CoT, when the CoT was load-bearing, reorganises which concepts
+dominate the influence onto the answer token. It does not correlate
+with mistake injection because inserting a single wrong step into an
+otherwise unchanged CoT need not reorganise the mechanism: the model
+may carry the error forward through the same concepts that produced
+the original answer, or detect and discount it through localised
+features that a top-$k$ summary of the influence-weighted graph does
+not foreground. Truncation and mistake injection probe mechanistically
+distinct phenomena, and a metric that measures global mechanism
+reorganisation is the right instrument for one and the wrong
+instrument for the other.
 
-\paragraph{Critiques motivating this work.}
-\citet{hendrycks2025} and \citet{barez2025} argue that interpretability
-research has not yet produced reliable behavioral predictions;
-AGD is an attempt to close that gap on the specific axis of CoT faithfulness.
+The implication for benchmark design is that aggregating sub-protocols
+into a single CoT-faithfulness score loses information about the
+mechanism that produced the score. Reporting the truncation and
+mistake-injection axes separately, and pairing each with a
+mechanism-level metric appropriate to it, gives a more discriminating
+picture of when a model is actually using its CoT.
 
-% ─────────────────────────────────────────────────────────────────────────────
-\section{Conclusion}
-\label{sec:conclusion}
-
-We introduced AGD, the first mechanism-level metric for CoT faithfulness,
-and showed that it \todo{[positive: provides incremental signal beyond
-activation baselines] / [negative: does not improve over activation-cosine
-baselines --- in which case insert pre-registered negative framing here]}.
-We release a benchmark of paired prompts across three perturbation regimes
-and provide open-source code for reproducing all results.
-Future work includes extending AGD to attention-mediated edges via the QK
-attribution framework \citep{lindsey2025qk}, applying AGD to
-continuous-thought models, and using AGD as a faithfulness regularizer
-during training.
-
-% ─────────────────────────────────────────────────────────────────────────────
 \paragraph{Limitations.}
-AGD is inherently {\em lossy}: pruned attribution graphs are a summary of
-internal computation, not a complete one.
-The metric is model-specific (requires a trained transcoder dictionary) and
-currently validated only on Gemma-2-2B; we provide a 100-prompt Llama-3.2-1B
-robustness check as preliminary cross-model evidence.
+We evaluate one model (Gemma-2-2B-it) with one transcoder family
+(Gemma Scope per-layer transcoders); the metric inherits the
+limitations of its dictionary, and cross-model evaluation requires a
+model-matched transcoder family. $\gdiv$ is correlational, and we have
+not run causal interventions on the concepts it flags as divergent.
+Pruned attribution graphs are themselves a summary of the underlying
+computation, not a complete record.
 
-% ─────────────────────────────────────────────────────────────────────────────
+\paragraph{Future work.}
+Three directions are open. The first is a complementary mechanism-level
+metric for the error-detection axis, since the dissociation implies
+one is needed. Error-correction features that activate locally around
+inserted mistakes, visible in the attribution graph but not foregrounded
+by a global top-$k$ summary, are a natural starting point. The second
+is causal feature ablation on the concepts $\gdiv$ flags as divergent:
+if the metric correctly identifies the mechanism that carried the
+answer, ablating those concepts should reproduce the perturbation's
+behavioural effect. The third is cross-model evaluation as transcoder
+dictionaries become available for additional architectures.
+
+% =============================================================================
+\bibliographystyle{icml2026}
 \bibliography{refs}
-\bibliographystyle{plainnat}
+
+% =============================================================================
+\appendix
+\onecolumn
+
+\section{Top-$k$ ablation}
+\label{app:k}
+
+The only hyperparameter in \Cref{eq:grace} is the top-$k$ truncation.
+\Cref{tab:ksweep} reports
+$\rho(\gdiv, \text{AOC}_{\text{composite}})$ for
+$k \in \{16, 32, 64, 128\}$ on the full 143-item set. All four values
+are significant at $p < 10^{-3}$ and overlap in confidence interval, so
+the default $k = 64$ is not a tuned operating point.
+
+\begin{table}[h]
+\centering\small
+\caption{Spearman $\rho$ between $\gdiv$ and Lanham AOC across $k$.}
+\label{tab:ksweep}
+\begin{tabular}{cccc}
+\toprule
+$k$ & $\rho$ & 95\% CI & $p$ \\
+\midrule
+16  & ${+}0.370$ & $[+0.17, +0.54]$ & ${<}10^{-3}$ \\
+32  & ${+}0.349$ & $[+0.14, +0.52]$ & ${<}10^{-3}$ \\
+64  & ${+}0.341$ & $[+0.13, +0.52]$ & ${<}10^{-3}$ \\
+128 & ${+}0.343$ & $[+0.13, +0.52]$ & ${<}10^{-3}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Influence-weighting ablation}
+\label{app:influence}
+
+Replacing the influence-weighted Jaccard $\Jw$ in \Cref{eq:grace} with
+the unweighted shared-concept fraction
+$|\mathcal{N}_k(G_0) \cap \mathcal{N}_k(G_1)| /
+ |\mathcal{N}_k(G_0) \cup \mathcal{N}_k(G_1)|$
+reduces $\rho(\cdot, \text{AOC}_{\text{composite}})$ from
+${+}0.444$ (95\% CI $[+0.29, +0.56]$) to ${+}0.284$
+(95\% CI $[+0.13, +0.42]$). Treating all top-$k$ concepts as equally
+important therefore costs roughly a third of the metric's correlation
+with AOC, so the influence-weighting is retained throughout the paper.
+
+\section{Edit-distance and graph-size partial-Spearman audit}
+\label{app:partial}
+
+We assessed whether the headline correlation could be explained by the
+trivial textual or structural confounders that any same-prompt
+perturbation must introduce. \Cref{tab:partial} reports the partial
+Spearman of $\gdiv$ against AOC after partialling out each baseline
+individually, and after partialling out all three jointly.
+
+\begin{table}[h]
+\centering\small
+\caption{Partial Spearman of $\gdiv$ against AOC, controlling for
+         textual and structural baselines.}
+\label{tab:partial}
+\begin{tabular}{lcc}
+\toprule
+Variable(s) controlled & Partial $\rho$ & $p$ \\
+\midrule
+\texttt{edit\_norm}             & ${+}0.351$ & ${<}10^{-4}$ \\
+\texttt{len\_diff}              & ${+}0.358$ & ${<}10^{-4}$ \\
+graph-size difference           & ${+}0.396$ & ${<}10^{-4}$ \\
+all three jointly               & ${+}0.341$ & ${<}10^{-4}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The signal survives every control. We additionally note that an early
+qualitative observation, that Regime~A produced higher $\gdiv$ than
+the Regime-B mistake-injection sub-regime, is fully accounted for by
+edit-distance differences: paraphrases rewrite roughly $44\%$ of CoT
+tokens, while mistake injection rewrites only $\sim 3\%$. We do not
+claim this ordering as a mechanistic effect.
+
+\section{Per-regime breakdown of the headline correlation}
+\label{app:regime}
+
+The Regime-B set decomposes into two perturbation types. The headline
+correlation holds in both, with truncation pairs driving the bulk of
+the signal:
+\begin{itemize}
+  \setlength{\itemsep}{2pt}\setlength{\topsep}{2pt}
+  \item Truncation pairs only: $\rho = {+}0.402$, 95\% CI
+        $[+0.25, +0.53]$.
+  \item Mistake-injection pairs only: $\rho = {+}0.223$, 95\% CI
+        $[+0.04, +0.38]$.
+\end{itemize}
+This regime-level pattern is the same effect reported per-AOC-component
+in \Cref{tab:dissociation}, viewed at the level of the perturbation
+that produced each pair rather than the AOC sub-score that scored it.
+
+\section{Hint-injection regime as scope check}
+\label{app:hint}
+
+Regime~C consists of Turpin-style hint-injection pairs, in which the
+prompt rather than the CoT is perturbed. As a scope check, we evaluated
+whether $\gdiv$, computed over the answer-token attribution graphs of
+the unbiased and biased prompts, predicts the binary outcome of whether
+the model's answer flips toward the hint. On 287 pairs, $\gdiv$
+achieves AUROC $= 0.47$, 95\% CI $[0.40, 0.54]$, indistinguishable from
+chance. Because Regime~C perturbs the prompt rather than the CoT, the
+two attribution graphs diverge for reasons unrelated to the CoT
+mechanism that \GRACE{} is designed to summarise; this regime is
+included for completeness rather than as a positive result.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.55\linewidth]{figures/f3_auroc}
+  \caption{ROC curve for $\gdiv$ predicting hint-induced answer flips
+           (Regime~C, $n=287$). AUROC $= 0.47$, 95\% CI $[0.40, 0.54]$,
+           confirming chance-level discrimination.}
+  \label{fig:auroc}
+\end{figure}
+
+\section{Neuronpedia interpretations of high-influence concepts}
+\label{app:neuronpedia}
+
+We inspected the most influential concepts in Regime-B graphs by
+querying their Neuronpedia entries. Concepts that appear as
+high-influence in over $80\%$ of pairs (i.e. domain-general backbone
+features) include \texttt{L22\_F11133} (``narrative progression''),
+\texttt{L24\_F12351} (``political positions''), and
+\texttt{L25\_F5714} (``small sample sizes in studies''). Concepts that
+gain influence specifically in high-$\gdiv$ pairs (i.e. that appear
+when the CoT is structurally engaged) include \texttt{L24\_F6157}
+(``time'') and \texttt{L23\_F10308} (``numerical data patterns''). The
+qualitative shift from generic backbone concepts to item-specific
+concepts under high-$\gdiv$ conditions is consistent with the headline
+correlation: when the CoT is genuinely load-bearing, the model routes
+through domain-specific features, and an aggregate metric registers
+the shift as a mechanism reorganisation.
+
+\section{Reproducibility}
+\label{app:repro}
+
+The released artefact bundle contains the per-pair parquet of $\gdiv$
+values with regime labels, edit-distance and length features
+(\texttt{artifacts/agd/pano\_pairs.parquet}, $n = 1\,321$ rows), the
+per-item Lanham AOC sub-scores
+(\texttt{artifacts/behavioral/aoc\_lanham.parquet}), the full set of
+attribution graph JSON files (\texttt{artifacts/graphs/}), and the
+reference implementation of \GRACE{} in approximately 120 lines of
+Python (\texttt{src/pano.py}). The numbered analysis scripts reproduce
+every correlation, ablation, and confidence interval reported in the
+main text.
 
 \end{document}

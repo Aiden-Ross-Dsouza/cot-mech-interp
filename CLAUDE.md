@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **GRACE (Graph Reasoning Attribution for CoT Evaluation)** — a mechanistic interpretability research project that measures faithfulness of chain-of-thought reasoning in LLMs by comparing attribution graphs across paired CoT conditions.
 
-**Target venue:** ICML 2026 Mechanistic Interpretability Workshop (deadline May 8, 2026 AOE).
+**Target venue:** ICML 2026 Mechanistic Interpretability Workshop. **Submitted May 8, 2026 AOE (deadline passed — paper is in review).**
 
 **One-line pitch:** We propose GRACE, a position-agnostic, influence-weighted attribution graph comparison metric for CoT faithfulness. The key design insight — that naive feature-ID comparison silently measures sequence-length drift rather than mechanism change — is itself a community contribution. GRACE reveals that graph-level divergence captures CoT *necessity* but not sycophancy or error-detection, a dissociation that is mechanistically informative.
 

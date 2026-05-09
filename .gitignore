@@ -1,5 +1,6 @@
 # ── Large research artifacts (regenerated from scripts) ──────────────────────
 artifacts/
+*.zip
 
 # ── Raw and generated data ────────────────────────────────────────────────────
 data/prompts/
@@ -13,6 +14,7 @@ data/raw/
 # ── Scratch and temporary files ──────────────────────────────────────────────
 scratch/
 scratch*
+draw_grace*.py
 
 # ── HuggingFace model cache ───────────────────────────────────────────────────
 .cache/
@@ -74,6 +76,8 @@ logs/
 *.synctex.gz
 *.fdb_latexmk
 *.fls
+*.bak
+*.tex.bak
 *.pdf
 !paper/main.pdf
 !example_paper.pdf
@@ -84,6 +88,14 @@ example_paper.*
 icml_numpapers.pdf
 paper/example_paper.pdf
 paper/Neel-Nanda-blog.txt
+scripts/20_paper_figures.py
+paper/*.sty
+paper/*.bst
+paper/*.png
+paper/table1.tex
+cot_interp_paper/
+cot_interp_paper_restored/
+paper/figures/
 
 # ── Project artifacts (don't ignore these if you want them in the repo) ──────
 # AGD_Project_Handoff_Document.md
