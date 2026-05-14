@@ -191,8 +191,12 @@ def spearman_with_ci(
     boot_rhos = []
     for _ in range(n_boot):
         idx = rng.choice(n, size=n, replace=True)
-        r, _ = scipy_stats.spearmanr(x_clean[idx], y_clean[idx])
-        boot_rhos.append(r)
+        xs, ys = x_clean[idx], y_clean[idx]
+        if len(np.unique(xs)) < 2 or len(np.unique(ys)) < 2:
+            continue
+        r, _ = scipy_stats.spearmanr(xs, ys)
+        if not np.isnan(r):
+            boot_rhos.append(r)
     boot_rhos = np.array(boot_rhos)
 
     # R2 fix: BCa bootstrap (bias-corrected accelerated), matching prereg.md §6.

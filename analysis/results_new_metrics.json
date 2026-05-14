@@ -1,0 +1,31 @@
+{
+  "ed": {
+    "ed_f0.10": {},
+    "summary": {
+      "n_valid": 155,
+      "mean": 0.07185507832899375,
+      "std": 0.2165012705618419,
+      "median": 0.0006556883700271395,
+      "n_nan": 62
+    }
+  },
+  "htir": {
+    "n_valid": 287,
+    "n_nan": 3,
+    "mean_htir_flip": 0.028311768478990848,
+    "mean_htir_no_flip": 0.03758357719995603,
+    "mean_htir_overall": 0.034191452058139504,
+    "std_htir": 0.03884636738105095,
+    "htir_threshold_0.05_fraction": 0.30662020905923343,
+    "auroc_htir_vs_flip": 0.439
+  },
+  "config": {
+    "f_values": [
+      0.1
+    ],
+    "graph_dir": "artifacts\\graphs",
+    "n_mistake_pairs": 205,
+    "n_hint_pairs": 290,
+    "tokenizer_used": false
+  }
+}

@@ -1,0 +1,295 @@
+{
+  "backbone_split": {
+    "n_total_concepts": 759,
+    "n_backbone": 40,
+    "n_item_specific": 605,
+    "n_middle": 114,
+    "top_backbone_concepts": [
+      "L0_F16200",
+      "L18_F10940",
+      "L25_F4717",
+      "L0_F13004",
+      "L24_F13541",
+      "L23_F14910",
+      "L19_F10674",
+      "L24_F13277",
+      "L1_F1412",
+      "L22_F11133",
+      "L20_F13500",
+      "L23_F1916",
+      "L25_F13822",
+      "L18_F2441",
+      "L19_F9893",
+      "L23_F14792",
+      "L20_F7740",
+      "L24_F2813",
+      "L17_F3452",
+      "L21_F7740"
+    ],
+    "filtered_grace_correlations": {}
+  },
+  "band_grace_correlations": {
+    "early": {},
+    "mid": {},
+    "late": {},
+    "full": {}
+  },
+  "mistake_locality_sanity": {
+    "n_items": 10,
+    "locality_fraction_mean": 0.0031294822603072717,
+    "locality_fraction_std": 0.005246973506152809,
+    "locality_fraction_median": 0.0004383318476434448,
+    "items": [
+      {
+        "item_id": "bbh_hyperbaton_0000_mistake",
+        "mistake_char_pos": 440,
+        "mistake_token_pos_approx": 110,
+        "cot_len_tokens_approx": 146,
+        "total_shift": 1.6755488059246644,
+        "local_shift": 0.0,
+        "locality_fraction": 0.0,
+        "n_positions": 159
+      },
+      {
+        "item_id": "bbh_hyperbaton_0001_mistake",
+        "mistake_char_pos": 473,
+        "mistake_token_pos_approx": 118,
+        "cot_len_tokens_approx": 168,
+        "total_shift": 1.703608801594811,
+        "local_shift": 0.0014934919873293765,
+        "locality_fraction": 0.0008766636952868896,
+        "n_positions": 171
+      },
+      {
+        "item_id": "bbh_hyperbaton_0002_mistake",
+        "mistake_char_pos": 535,
+        "mistake_token_pos_approx": 133,
+        "cot_len_tokens_approx": 193,
+        "total_shift": 1.637055007923743,
+        "local_shift": 0.020998486981234556,
+        "locality_fraction": 0.01282698924568618,
+        "n_positions": 182
+      },
+      {
+        "item_id": "bbh_hyperbaton_0003_mistake",
+        "mistake_char_pos": 490,
+        "mistake_token_pos_approx": 122,
+        "cot_len_tokens_approx": 191,
+        "total_shift": 1.7429002548366235,
+        "local_shift": 0.0,
+        "locality_fraction": 0.0,
+        "n_positions": 182
+      },
+      {
+        "item_id": "bbh_hyperbaton_0007_mistake",
+        "mistake_char_pos": 516,
+        "mistake_token_pos_approx": 129,
+        "cot_len_tokens_approx": 190,
+        "total_shift": 1.6942597636805936,
+        "local_shift": 0.0065864631612402675,
+        "locality_fraction": 0.0038875167211265753,
+        "n_positions": 184
+      },
+      {
+        "item_id": "bbh_hyperbaton_0009_mistake",
+        "mistake_char_pos": 404,
+        "mistake_token_pos_approx": 101,
+        "cot_len_tokens_approx": 135,
+        "total_shift": 1.6383339772610124,
+        "local_shift": 0.0,
+        "locality_fraction": 0.0,
+        "n_positions": 146
+      },
+      {
+        "item_id": "bbh_hyperbaton_0000_mistake",
+        "mistake_char_pos": 440,
+        "mistake_token_pos_approx": 110,
+        "cot_len_tokens_approx": 146,
+        "total_shift": 1.6755488059246644,
+        "local_shift": 0.0,
+        "locality_fraction": 0.0,
+        "n_positions": 159
+      },
+      {
+        "item_id": "bbh_hyperbaton_0001_mistake",
+        "mistake_char_pos": 473,
+        "mistake_token_pos_approx": 118,
+        "cot_len_tokens_approx": 168,
+        "total_shift": 1.703608801594811,
+        "local_shift": 0.0014934919873293765,
+        "locality_fraction": 0.0008766636952868896,
+        "n_positions": 171
+      },
+      {
+        "item_id": "bbh_hyperbaton_0002_mistake",
+        "mistake_char_pos": 535,
+        "mistake_token_pos_approx": 133,
+        "cot_len_tokens_approx": 193,
+        "total_shift": 1.637055007923743,
+        "local_shift": 0.020998486981234556,
+        "locality_fraction": 0.01282698924568618,
+        "n_positions": 182
+      },
+      {
+        "item_id": "bbh_hyperbaton_0003_mistake",
+        "mistake_char_pos": 490,
+        "mistake_token_pos_approx": 122,
+        "cot_len_tokens_approx": 191,
+        "total_shift": 1.7429002548366235,
+        "local_shift": 0.0,
+        "locality_fraction": 0.0,
+        "n_positions": 182
+      }
+    ],
+    "interpretation": "If locality_fraction_mean >> 1/n_positions, the ED metric should work. Mean=0.003, expected-random=0.0058"
+  },
+  "hint_token_sanity": {
+    "n_flip": 5,
+    "n_no_flip": 5,
+    "mean_htir_flip": 0.03713341663190912,
+    "mean_htir_no_flip": 0.035779051720099986,
+    "items": [
+      {
+        "item_id": "bbh_hyperbaton_0000_hintA",
+        "label": "flip",
+        "flipped": true,
+        "hint_char_range": [
+          254,
+          306
+        ],
+        "hint_token_range": [
+          63,
+          76
+        ],
+        "hint_influence_fraction": 0.035158508327527954
+      },
+      {
+        "item_id": "bbh_hyperbaton_0001_hintA",
+        "label": "flip",
+        "flipped": true,
+        "hint_char_range": [
+          264,
+          316
+        ],
+        "hint_token_range": [
+          66,
+          79
+        ],
+        "hint_influence_fraction": 0.04698323386105492
+      },
+      {
+        "item_id": "bbh_hyperbaton_0003_hintA",
+        "label": "flip",
+        "flipped": true,
+        "hint_char_range": [
+          258,
+          310
+        ],
+        "hint_token_range": [
+          64,
+          77
+        ],
+        "hint_influence_fraction": 0.04629207915761681
+      },
+      {
+        "item_id": "bbh_hyperbaton_0004_hintA",
+        "label": "flip",
+        "flipped": true,
+        "hint_char_range": [
+          272,
+          324
+        ],
+        "hint_token_range": [
+          68,
+          81
+        ],
+        "hint_influence_fraction": 0.0370026137686594
+      },
+      {
+        "item_id": "bbh_hyperbaton_0005_hintA",
+        "label": "flip",
+        "flipped": true,
+        "hint_char_range": [
+          248,
+          300
+        ],
+        "hint_token_range": [
+          62,
+          75
+        ],
+        "hint_influence_fraction": 0.02023064804468649
+      },
+      {
+        "item_id": "bbh_hyperbaton_0002_hintB",
+        "label": "no_flip",
+        "flipped": false,
+        "hint_char_range": [
+          276,
+          328
+        ],
+        "hint_token_range": [
+          69,
+          82
+        ],
+        "hint_influence_fraction": 0.03673546679045567
+      },
+      {
+        "item_id": "bbh_hyperbaton_0008_hintB",
+        "label": "no_flip",
+        "flipped": false,
+        "hint_char_range": [
+          284,
+          336
+        ],
+        "hint_token_range": [
+          71,
+          84
+        ],
+        "hint_influence_fraction": 0.03636060340075893
+      },
+      {
+        "item_id": "bbh_hyperbaton_0016_hintB",
+        "label": "no_flip",
+        "flipped": false,
+        "hint_char_range": [
+          248,
+          300
+        ],
+        "hint_token_range": [
+          62,
+          75
+        ],
+        "hint_influence_fraction": 0.0283067605750621
+      },
+      {
+        "item_id": "bbh_hyperbaton_0018_hintB",
+        "label": "no_flip",
+        "flipped": false,
+        "hint_char_range": [
+          290,
+          342
+        ],
+        "hint_token_range": [
+          72,
+          85
+        ],
+        "hint_influence_fraction": 0.03402624226333252
+      },
+      {
+        "item_id": "bbh_hyperbaton_0019_hintB",
+        "label": "no_flip",
+        "flipped": false,
+        "hint_char_range": [
+          286,
+          338
+        ],
+        "hint_token_range": [
+          71,
+          84
+        ],
+        "hint_influence_fraction": 0.043466185570890714
+      }
+    ],
+    "interpretation": "If mean_htir_flip >> mean_htir_no_flip, HTIR is a valid instrument. If both are near zero, hint operates below the feature level."
+  }
+}

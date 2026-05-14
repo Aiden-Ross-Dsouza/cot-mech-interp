@@ -89,15 +89,28 @@ def construct_regime_a_pairs(cfg, pilot: bool) -> int:
     return n
 
 
-def construct_regime_b_pairs(cfg, pilot: bool) -> int:
-    """Construct truncation and add-mistake pairs from cots.jsonl."""
-    cots_path = Path(cfg.paths.pairs) / "cots.jsonl"
+def construct_regime_b_pairs(cfg, pilot: bool, cots_path: Path = None,
+                             out_dir: Path = None) -> int:
+    """Construct truncation and add-mistake pairs from cots.jsonl.
+
+    Parameters
+    ----------
+    cots_path:
+        Path to CoTs JSONL (default: cfg.paths.pairs/cots.jsonl).
+    out_dir:
+        Directory for output pair files (default: cfg.paths.pairs).
+    """
+    if cots_path is None:
+        cots_path = Path(cfg.paths.pairs) / "cots.jsonl"
+    if out_dir is None:
+        out_dir = Path(cfg.paths.pairs)
     if not cots_path.exists():
-        logger.error(f"Missing {cots_path}. Run script 01 first.")
+        logger.error(f"Missing {cots_path}. Run script 01 (or 01b for Llama) first.")
         return 0
 
-    dst_trunc = Path(cfg.paths.pairs) / "regime_B_truncate.jsonl"
-    dst_mistake = Path(cfg.paths.pairs) / "regime_B_addmistake.jsonl"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    dst_trunc = out_dir / "regime_B_truncate.jsonl"
+    dst_mistake = out_dir / "regime_B_addmistake.jsonl"
 
     n_trunc = 0
     n_mistake = 0
@@ -240,21 +253,35 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="config.yaml")
     parser.add_argument("--pilot", action="store_true")
+    parser.add_argument("--cot-file", default=None,
+                        help="Override CoT input file (default: cfg.paths.pairs/cots.jsonl). "
+                             "Use data/pairs/llama/cots_llama.jsonl for Llama campaign.")
+    parser.add_argument("--out-dir", default=None,
+                        help="Override pair output directory (default: cfg.paths.pairs). "
+                             "Use data/pairs/llama/ for Llama campaign.")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
     pilot = args.pilot
+    cot_path = Path(args.cot_file) if args.cot_file else None
+    out_dir = Path(args.out_dir) if args.out_dir else None
 
-    logger.info("Constructing Regime A pairs…")
-    nA = construct_regime_a_pairs(cfg, pilot)
+    if cot_path or out_dir:
+        # Llama campaign: only construct Regime B pairs from the Llama CoTs
+        logger.info("Constructing Regime B pairs (Llama CoTs)…")
+        nB = construct_regime_b_pairs(cfg, pilot, cots_path=cot_path, out_dir=out_dir)
+        logger.info(f"Done: B={nB}")
+    else:
+        logger.info("Constructing Regime A pairs…")
+        nA = construct_regime_a_pairs(cfg, pilot)
 
-    logger.info("Constructing Regime B pairs…")
-    nB = construct_regime_b_pairs(cfg, pilot)
+        logger.info("Constructing Regime B pairs…")
+        nB = construct_regime_b_pairs(cfg, pilot)
 
-    logger.info("Constructing Regime C pairs…")
-    nC = construct_regime_c_pairs(cfg, pilot)
+        logger.info("Constructing Regime C pairs…")
+        nC = construct_regime_c_pairs(cfg, pilot)
 
-    logger.info(f"\nAll pairs constructed: A={nA}, B={nB}, C={nC}, total={nA+nB+nC}")
+        logger.info(f"\nAll pairs constructed: A={nA}, B={nB}, C={nC}, total={nA+nB+nC}")
 
 
 if __name__ == "__main__":
