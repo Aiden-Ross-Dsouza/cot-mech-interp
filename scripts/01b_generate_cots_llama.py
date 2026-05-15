@@ -17,25 +17,10 @@ Full:  all BBH + MMLU items from cfg.dataset (skip GSM8K; numeric format differs
 """
 from __future__ import annotations
 
-# ── SSL patch — must be the very first thing, before any HF/torch imports ─────
-import ssl
+# ── Offline mode — use cached HF files; avoids SSL errors on corporate networks
 import os as _os
-
-_os.environ["HF_HUB_DISABLE_SSL_VERIFICATION"] = "1"
-_os.environ["REQUESTS_CA_BUNDLE"] = ""
-_os.environ["CURL_CA_BUNDLE"] = ""
-ssl._create_default_https_context = ssl._create_unverified_context
-
-# Patch requests.adapters.HTTPAdapter.send (base class for all HF requests)
-import requests.adapters as _ra
-_orig_adapter_send = _ra.HTTPAdapter.send
-def _adapter_send_no_verify(self, request, **kwargs):
-    kwargs["verify"] = False
-    return _orig_adapter_send(self, request, **kwargs)
-_ra.HTTPAdapter.send = _adapter_send_no_verify
-
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+_os.environ["HF_HUB_OFFLINE"] = "1"
+_os.environ["TRANSFORMERS_OFFLINE"] = "1"
 # ─────────────────────────────────────────────────────────────────────────────
 
 import argparse

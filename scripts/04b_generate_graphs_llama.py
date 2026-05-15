@@ -26,24 +26,10 @@ Downstream analysis scripts (20–23) are model-agnostic and work on these files
 """
 from __future__ import annotations
 
-# ── SSL patch — must be the very first thing, before any circuit-tracer/HF imports
-import ssl
+# ── Offline mode — use cached HF files; avoids SSL errors on corporate networks
 import os
-os.environ["HF_HUB_DISABLE_SSL_VERIFICATION"] = "1"
-os.environ["REQUESTS_CA_BUNDLE"] = ""
-os.environ["CURL_CA_BUNDLE"] = ""
-ssl._create_default_https_context = ssl._create_unverified_context
-
-# Patch requests.adapters.HTTPAdapter.send (base class for all HF requests)
-import requests.adapters as _ra
-_orig_adapter_send = _ra.HTTPAdapter.send
-def _adapter_send_no_verify(self, request, **kwargs):
-    kwargs["verify"] = False
-    return _orig_adapter_send(self, request, **kwargs)
-_ra.HTTPAdapter.send = _adapter_send_no_verify
-
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+os.environ["HF_HUB_OFFLINE"] = "1"          # use cached model/transcoder files only
+os.environ["TRANSFORMERS_OFFLINE"] = "1"     # transformers: skip version checks
 # ─────────────────────────────────────────────────────────────────────────────
 
 import argparse
@@ -57,7 +43,7 @@ import jsonlines
 import torch
 from tqdm import tqdm
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -140,6 +126,7 @@ def generate_llama_graph(
 
     # Check output exists (resumable)
     out_path = graph_dir / f"{item_id}_{condition}.json"
+    logger.debug(f"  [{item_id}/{condition}] Graph will save to: {out_path.resolve()}")
     if out_path.exists():
         return None
 
@@ -265,6 +252,8 @@ def generate_llama_graph(
         },
     }
     save_graph(graph_dict, out_path)
+    logger.info(f"  [{item_id}/{condition}] Graph saved: {len(nodes)} nodes, {len(edges)} edges (pruning_threshold: {cfg.agd.pruning_threshold}).")
+    logger.info(f"  [{item_id}/{condition}] File on disk: {out_path.resolve().exists()} → {out_path.resolve()}")
     return graph_dict
 
 
@@ -285,6 +274,8 @@ def main():
     graph_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info(f"Llama pilot graph generation: regimes={regimes}, pilot={args.pilot}")
+    logger.info(f"Python cwd: {Path('.').resolve()}")
+    logger.info(f"graph_dir (absolute): {graph_dir.resolve()}")
     logger.info(f"Pair files: {llama_pairs_dir}")
     logger.info(f"Graph output: {graph_dir}")
 
